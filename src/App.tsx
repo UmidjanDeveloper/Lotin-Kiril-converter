@@ -70,7 +70,7 @@ export default function App() {
           <div className="flex items-center gap-3 shrink-0">
             <span className="text-xs font-mono bg-indigo-950/50 text-indigo-300 px-4 py-2 rounded-xl border border-indigo-500/20 flex items-center gap-2 shadow-lg backdrop-blur">
               <Zap className="w-3.5 h-3.5 text-indigo-400 animate-pulse fill-indigo-400/20" />
-              100% Oflayn va Xavfsiz
+              100% Online va Xavfsiz
             </span>
           </div>
         </div>
