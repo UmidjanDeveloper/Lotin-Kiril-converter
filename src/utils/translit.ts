@@ -10,6 +10,12 @@
 const CYR_VOWELS = new Set('аеёиоуэюяўАЕЁИОУЭЮЯЎ');
 const LAT_VOWELS = new Set('aeiouAEIOU');
 
+function isCyrillicLetter(char: string): boolean {
+  if (!char) return false;
+  const code = char.charCodeAt(0);
+  return (code >= 0x0400 && code <= 0x04FF);
+}
+
 // Exception dictionaries for high spelling accuracy
 const CYR_TO_LAT_EXCEPTIONS: Record<string, string> = {
   'Тошкент': 'Toshkent', 'тошкент': 'toshkent',
@@ -19,7 +25,7 @@ const CYR_TO_LAT_EXCEPTIONS: Record<string, string> = {
   'Президент': 'Prezident', 'президент': 'prezident',
   'Ҳуқуқ': 'Huquq', 'ҳуқуқ': 'huquq',
   'Судья': 'Sudya', 'судья': 'sudya',
-  'съезд': 'syezd', 'Съезд': 'Syezd',
+  'съезд': "s'ezd", 'Съезд': "S'ezd",
   'сентябрь': 'sentabr', 'Сентябрь': 'Sentabr',
   'октябрь': 'oktabr', 'Октябрь': 'Oktabr',
   'ноябрь': 'noyabr', 'Ноябрь': 'Noyabr',
@@ -37,8 +43,8 @@ const LAT_TO_CYR_EXCEPTIONS: Record<string, string> = {
   'Milliy': 'Миллий', 'milliy': 'миллий',
   'Prezident': 'Президент', 'prezident': 'президент',
   'Huquq': 'Ҳуқуқ', 'huquq': 'ҳуқуқ',
-  'Sudya': 'Судья', 'sudya': 'судья',
-  'syezd': 'съезд', 'Syezd': 'Съезд',
+  'Sudya': 'Судья', 'sudya': 'судя',
+  "s'ezd": 'съезд', "S'ezd": 'Съезд',
   'sentabr': 'сентябрь', 'Sentabr': 'Сентябрь',
   'oktabr': 'октябрь', 'Oktabr': 'Октябрь',
   'noyabr': 'ноябрь', 'Noyabr': 'Ноябрь',
@@ -119,7 +125,7 @@ const LAT_TO_CYR_SINGLE: Record<string, string> = {
 function isNextCyrUpper(text: string, index: number): boolean {
   for (let j = index + 1; j < text.length; j++) {
     const c = text[j];
-    if (/[а-яА-ЯёЁўЎқҚғҒҳҲ]/.test(c)) {
+    if (isCyrillicLetter(c)) {
       return c === c.toUpperCase();
     }
     if (/\s/.test(c)) return false;
@@ -170,7 +176,7 @@ export function cyrillicToLatin(text: string): string {
     
     // 1. Handle "Е" and "е"
     if (char === 'е' || char === 'Е') {
-      const isWordStart = i === 0 || !/[а-яА-ЯёЁўЎқҚғҒҳҲ]/.test(prevChar);
+      const isWordStart = i === 0 || !isCyrillicLetter(prevChar);
       const isAfterVowel = prevChar ? CYR_VOWELS.has(prevChar) : false;
       
       if (isWordStart || isAfterVowel) {
@@ -187,10 +193,19 @@ export function cyrillicToLatin(text: string): string {
     
     // 2. Handle "Ц" and "ц"
     if (char === 'ц' || char === 'Ц') {
-      if (char === 'Ц') {
-        result += isNextCyrUpper(processedText, i) ? 'TS' : 'Ts';
+      const isWordStart = i === 0 || !isCyrillicLetter(prevChar);
+      if (isWordStart) {
+        if (char === 'Ц') {
+          result += 'S';
+        } else {
+          result += 's';
+        }
       } else {
-        result += 'ts';
+        if (char === 'Ц') {
+          result += isNextCyrUpper(processedText, i) ? 'TS' : 'Ts';
+        } else {
+          result += 'ts';
+        }
       }
       continue;
     }

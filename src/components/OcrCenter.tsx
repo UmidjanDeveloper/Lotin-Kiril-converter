@@ -17,6 +17,7 @@ interface OcrCenterProps {
 export default function OcrCenter({ currentLang, theme = 'dark' }: OcrCenterProps) {
   const t = UI_TRANSLATIONS[currentLang];
   const [selectedImg, setSelectedImg] = useState<string | null>(null);
+  const [imgBase64, setImgBase64] = useState<string | null>(null);
   const [ocrText, setOcrText] = useState('');
   const [ocrProgress, setOcrProgress] = useState<number | null>(null);
   const [ocrStatus, setOcrStatus] = useState<'idle' | 'scanning' | 'success' | 'error'>('idle');
@@ -26,7 +27,7 @@ export default function OcrCenter({ currentLang, theme = 'dark' }: OcrCenterProp
   const DEMO_OCTR_TEXTS = [
     "ЎЗБЕКИСТОН РЕСПУБЛИКАСИ ВАЗИРЛАР МАҲКАМАСИ\n\nҚАРОР\n\nДавлат тили тўғрисидаги қонун ва қоидалар ижросини таъминлаш тўғрисида.\n\nКорхона ва ташкилотларда иш юритиш тўлиқ лотин алифбосида амалга оширилиши лозим.",
     "МУҚАДДАС ВАТАН ТУЙҒУСИ\n\nМиллий ўзликни англаш ва маданий меросни асраш - ҳар бир фуқаронинг олий вазифасидир. Тил - миллатнинг кўзгуси, тарихи ва қалбидир.",
-    "КОНТРАКТ №402-A\n\nИкки томонлама олди-сотди мажбуриятларини бажариш ҳамда маданият va туризмни ривожлантириш лойиҳаси."
+    "КОНТРАКТ №402-A\n\nИкки томонлама олди-сотди мажбуриятларини бажариш ҳамda madaniyat va turizmni rivojlantirish loyihasi."
   ];
 
   const handleImgSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -37,58 +38,40 @@ export default function OcrCenter({ currentLang, theme = 'dark' }: OcrCenterProp
       setOcrText('');
       setOcrStatus('idle');
       setOcrProgress(null);
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImgBase64(reader.result as string);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
-  const startOcrScan = () => {
-    if (!selectedImg) return;
+  const startOcrScan = async () => {
+    if (!selectedImg || !imgBase64) return;
     setOcrStatus('scanning');
-    setOcrProgress(10);
+    setOcrProgress(20);
 
-    const Tesseract = (window as any).Tesseract;
-
-    if (Tesseract) {
-      setOcrProgress(30);
-      Tesseract.recognize(
-        selectedImg,
-        'eng+rus', 
-        {
-          logger: (m: any) => {
-            if (m.status === 'recognizing text' && typeof m.progress === 'number') {
-              setOcrProgress(30 + Math.floor(m.progress * 60));
-            }
-          }
-        }
-      ).then(({ data: { text } }: any) => {
-        setOcrProgress(100);
-        setOcrStatus('success');
-        
-        let scannedResult = text.trim();
-        if (!scannedResult || scannedResult.length < 3) {
-          scannedResult = DEMO_OCTR_TEXTS[Math.floor(Math.random() * DEMO_OCTR_TEXTS.length)];
-        }
-        setOcrText(scannedResult);
-      }).catch((err: any) => {
-        console.error('OCR Tesseract exception: ', err);
-        setOcrProgress(70);
-        setTimeout(() => {
-          setOcrProgress(100);
-          setOcrStatus('success');
-          setOcrText(DEMO_OCTR_TEXTS[0]);
-        }, 1200);
+    try {
+      const res = await fetch('/api/gemini/ocr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: imgBase64 })
       });
-    } else {
-      let pct = 10;
-      const interval = setInterval(() => {
-        pct += 15;
-        setOcrProgress(pct);
-        if (pct >= 95) {
-          clearInterval(interval);
-          setOcrProgress(100);
-          setOcrStatus('success');
-          setOcrText(DEMO_OCTR_TEXTS[Math.floor(Math.random() * DEMO_OCTR_TEXTS.length)]);
-        }
-      }, 250);
+      setOcrProgress(70);
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || "OCR xizmatida xatolik yuz berdi");
+      }
+      const data = await res.json();
+      setOcrProgress(100);
+      setOcrStatus('success');
+      setOcrText(data.output || "Tasvirdan hech qanday matn aniqlanmadi.");
+    } catch (err: any) {
+      console.error("OCR Error:", err);
+      setOcrStatus('error');
+      setOcrProgress(null);
+      setOcrText("Tasvirdagi matnni aniqlash xizmati vaqtincha ishlamayapti. Iltimos, API kalitingiz va tarmoq ulanishingiz to'g'riligini tekshiring hamda birozdan keyin qayta urinib ko'ring.");
     }
   };
 
@@ -98,16 +81,34 @@ export default function OcrCenter({ currentLang, theme = 'dark' }: OcrCenterProp
     setOcrText(translated);
   };
 
-  const handleOcrTranslate = () => {
+  const handleOcrTranslate = async () => {
     if (!ocrText) return;
-    const isCyr = ocrText.includes('ў') || ocrText.includes('а') || ocrText.includes('ш');
-    const source = isCyr ? cyrillicToLatin(ocrText) : ocrText;
-    
-    const docTrans = `=== TRANSLATION (O'zbekcha ⇄ English) ===\n\n` +
-      `Original content processed completely into English:\n\n` +
-      `"Let's ensure full compliance with the State Language Act. All document preparation processes across state enterprises and public organizations must be carried out strictly using the Uzbek Latin script."\n\n` +
-      `* Done fully offline inside standard OCR engine module.`;
-    setOcrText(docTrans);
+    setOcrStatus('scanning');
+    setOcrProgress(50);
+    try {
+      const res = await fetch('/api/gemini/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: ocrText,
+          sourceLang: currentLang,
+          targetLang: 'en'
+        })
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || "Tarjima amalga oshmadi");
+      }
+      const data = await res.json();
+      setOcrText(`=== TARJIMA (O'zbekcha ⇄ English) ===\n\n${data.output || ""}`);
+      setOcrStatus('success');
+    } catch (err: any) {
+      console.error(err);
+      setOcrStatus('error');
+      setOcrText("Tarjima qilish xizmati vaqtincha ishlamayapti. Iltimos, API kalitingizni tekshiring.");
+    } finally {
+      setOcrProgress(null);
+    }
   };
 
   const handleOcrSaveWord = async () => {

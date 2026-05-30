@@ -30,209 +30,348 @@ export default function AiCenter({ currentLang, theme = 'dark' }: AiCenterProps)
   const [isAgentReplying, setIsAgentReplying] = useState(false);
 
   // Document templates state
-  const [selectedTemplate, setSelectedTemplate] = useState<'ariza' | 'tavsifnoma' | 'shartnoma'>('ariza');
+  const [selectedTemplate, setSelectedTemplate] = useState<string>('ariza');
   
-  // Ariza inputs
-  const [arizaDirector, setArizaDirector] = useState('A.B. Toshmatovga');
-  const [arizaCompany, setArizaCompany] = useState('"Mega Texnoloji" MCHJ');
-  const [arizaAuthor, setArizaAuthor] = useState('Karimov Akmal');
-  const [arizaDetail, setArizaDetail] = useState('shaxsiy sabablarga ko\'ra 10 kun muddatga oylik maosh saqlanmagan holda mehnat ta\'tili berishingizni');
-  
-  // Tavsifnoma inputs
-  const [tavAuthor, setTavAuthor] = useState('Salimov Umid');
-  const [tavPosition, setTavPosition] = useState('Bosh dasturchi muhandis');
-  const [tavDetail, setTavDetail] = useState('o\'z ishiga g\'oyat mas\'uliyatli va intizomli xodim. Jamoada katta hurmatga ega va qo\'l ostidagi muhandislarga ustozlik qilib keladi.');
-
-  // Shartnoma inputs
-  const [shartBuyer, setShartBuyer] = useState('Yuldashev Azamat (Pasport AA 1234567)');
-  const [shartSeller, setShartSeller] = useState('Rahimov Sobir (Pasport AB 7654321)');
-  const [shartProduct, setShartProduct] = useState('Chevrolet Lacetti rusumli avtotransport vositasi (Davlat raqami 01 A 777 AA)');
-  const [shartPrice, setShartPrice] = useState('110,000,000 (Bir yuz o\'n million) so\'m');
-
+  // Unified document outputs and controls
+  const [docTo, setDocTo] = useState('"Mega Texnoloji" MCHJ direktori A.B. Toshmatovga');
+  const [docFrom, setDocFrom] = useState('"Dasturchi" lavozimidagi Karimov Akmal tomonidan');
+  const [docDetail, setDocDetail] = useState('oila sharoitim tufayli 5 kun muddatga oylik maosh saqlanmagan holda ish haqi saqlanmaydigan mehnat ta\'tili berishingizni so\'rayman');
+  const [docPreviewMode, setDocPreviewMode] = useState<'computer' | 'handwriting'>('computer');
+  const [handwritingStyle, setHandwritingStyle] = useState<'blue' | 'black'>('blue');
+  const [generatedDocText, setGeneratedDocText] = useState<string>('');
+  const [isGeneratingDocText, setIsGeneratingDocText] = useState(false);
+  const [isAiGenerated, setIsAiGenerated] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const [generatingDoc, setGeneratingDoc] = useState(false);
 
-  const handleGenerateTemplateWord = async () => {
-    setGeneratingDoc(true);
-    let documentContent = '';
-
-    if (selectedTemplate === 'ariza') {
-      if (currentLang === 'ru') {
-        documentContent = `
-                                             Директору компании ${arizaCompany}
-                                             ${arizaDirector}
-                                             от ${arizaAuthor}
-
-                                    ЗАЯВЛЕНИЕ
-
-      Я, ${arizaAuthor}, настоящим заявлением прошу вас ${arizaDetail}.
-
-      Содержание заявления составлено в соответствии с требованиями трудового законодательства.
-
-      Дата: ${new Date().toLocaleDateString()}
-      Подпись: ________________
-        `;
-      } else if (currentLang === 'en') {
-        documentContent = `
-                                             To Director of ${arizaCompany}
-                                             ${arizaDirector}
-                                             From ${arizaAuthor}
-
-                                    APPLICATION
-
-      I, ${arizaAuthor}, hereby request you ${arizaDetail}.
-
-      This application has been drafted in compliance with official employment terms.
-
-      Date: ${new Date().toLocaleDateString()}
-      Signature: ________________
-        `;
-      } else {
-        documentContent = `
-                                             ${arizaCompany} direktori
-                                             ${arizaDirector}ga
-                                             ${arizaAuthor} tomonidan
-
-                                    ARIZA
-
-      Men ${arizaAuthor}, ushbu ariza orqali sizdan ${arizaDetail} so'rayman.
-
-      Ariza mazmuni qonuniy mehnat sharoitlari qoidalariga rioya qilgan holda tuzildi.
-
-      Sana: ${new Date().toLocaleDateString()}
-      Imzo: ________________
-        `;
-      }
-    } else if (selectedTemplate === 'tavsifnoma') {
-      if (currentLang === 'ru') {
-        documentContent = `
-                                    ХАРАКТЕРИСТИКА
-                              (Характеристика сотрудника)
-
-      Данная характеристика выдается руководством ${arizaCompany || '"Mega Texnoloji" MCHJ'} сотруднику ${tavAuthor}.
-
-      Сотрудник ${tavAuthor} работает на должности "${tavPosition}" в нашей компании.
-
-      За прошедший период работы он показал себя как ${tavDetail}.
-
-      Характеристика выдана для представления по месту требования.
-
-      Подпись руководства: ________________
-      Дата: ${new Date().toLocaleDateString()}
-        `;
-      } else if (currentLang === 'en') {
-        documentContent = `
-                                    RECOMMENDATION LETTER
-                              (Employee Recommendation)
-
-      This recommendation or appraisal is issued by the management of ${arizaCompany || '"Mega Texnoloji" MCHJ'} to ${tavAuthor}.
-
-      The employee ${tavAuthor} is employed as "${tavPosition}" in our company.
-
-      During the employment period, they have shown themselves to be ${tavDetail}.
-
-      This recommendation is prepared to be presented at requested destinations.
-
-      Management Signature: ________________
-      Date: ${new Date().toLocaleDateString()}
-        `;
-      } else {
-        documentContent = `
-                                    TAVSIFNOMA
-                                (Xodim tavsifi)
-
-      Ushbu tavsifnoma ${arizaCompany || '"Mega Texnoloji" MCHJ'} boshqaruvi tomonidan ${tavAuthor}ga taqdim etiladi.
-
-      Xodim ${tavAuthor}, korxonamizda "${tavPosition}" lavozimida faoliyat yuritib kelmoqda.
-
-      O'tgan davr mobaynida o'zini ${tavDetail} sifatida ko'rsatdi.
-      
-      Ushbu tavsifnoma tegishli joyga taqdim etish uchun ishlab chiqildi.
-
-      Rahbariyat imzosi: ________________
-      Sana: ${new Date().toLocaleDateString()}
-        `;
-      }
-    } else {
-      if (currentLang === 'ru') {
-        documentContent = `
-                                    ДОГОВОР
-                              (Договор купли-продажи)
-
-      город Ташкент                                 Дата: ${new Date().toLocaleDateString()}
-
-      Мы, с одной стороны ${shartSeller} (именуемый далее "Продавец"), и со второй стороны ${shartBuyer} (именуемый далее "Покупатель"), заключили настоящий договор о нижеследующем:
-
-      1. Предмет договора: Продавец продает принадлежащий ему ${shartProduct}, а Покупатель принимает его и обязуется выплатить оговоренную сумму.
-
-      2. Стоимость сделки: Оговоренная общая стоимость составляет ${shartPrice}.
-
-      3. Условия оплаты: Покупатель обязан полностью перевести указанную сумму в течение 3 банковских дней с момента подписания настоящего договора.
-
-      4. Подписи и реквизиты сторон:
-         Продавец: ______________________
-         Покупатель: __________________
-        `;
-      } else if (currentLang === 'en') {
-        documentContent = `
-                                    PURCHASE CONTRACT
-                              (Purchase & Sales Agreement)
-
-      Tashkent city                                 Date: ${new Date().toLocaleDateString()}
-
-      We, on one side ${shartSeller} (hereinafter referred to as "Seller"), and on the other side ${shartBuyer} (hereinafter referred to as "Buyer"), constructed this contract about:
-
-      1. Subject of Contract: The Seller sells their owned ${shartProduct}, and the Buyer accepts and pays the specified price.
-
-      2. Transaction Price: The agreed total value is ${shartPrice}.
-
-      3. Payment Terms: The Buyer must transfer the full price within 3 business bank days from signature of this contract.
-
-      4. Signatures and Credentials:
-         Seller: ______________________
-         Buyer: __________________
-        `;
-      } else {
-        documentContent = `
-                                    SHARTNOMA
-                                (Oldi-sotdi bitimi)
-
-      Toshkent shahri                                 Sana: ${new Date().toLocaleDateString()}
-
-      Biz, bir tomondan ${shartSeller} (bundan buyon "Sotuvchi" deb yuritiladi), va ikkinchi tomondan ${shartBuyer} (bundan buyon "Sotib oluvchi" deb yuritiladi), ushbu shartnomani quyidagilar haqida tuzdik:
-
-      1. Shartnoma predmeti: Sotuvchi o'ziga tegishli bo'lgan ${shartProduct}ni sotadi, Sotib oluvchi esa uni qabul qilib oladi va kelishilgan miqdorda haq to'laydi.
-
-      2. Bitim bahosi: Kelishilgan umumiy qiymat ${shartPrice}ni tashkil etadi.
-
-      3. To'lov shartlari: Sotib oluvchi ushbu summani shartnoma imzolangan paytdan boshlab 3 bank ish kunida to'liq o'tkazishi shart.
-
-      4. Tomonlarning imzolari va rekvizitlari:
-         Sotuvchi: ______________________
-         Sotib oluvchi: __________________
-        `;
-      }
+  // Helper defaults & fallbacks defined inline or outside component
+  const getTemplateDefaults = (type: string) => {
+    switch (type) {
+      case 'ariza':
+        return {
+          to: '"Mega Texnoloji" MCHJ direktori A.B. Toshmatovga',
+          from: '"Dasturchi" lavozimidagi Karimov Akmal tomonidan',
+          detail: 'oila sharoitim tufayli 5 kun muddatga oylik maosh saqlanmagan holda ish haqi saqlanmaydigan mehnat ta\'tili berishingizni so\'rayman'
+        };
+      case 'tushuntirish':
+        return {
+          to: '"Yuksak Parvoz" DUK rahbari S.S. Alimovga',
+          from: '"Yetakchi mutaxassis" Rahimov Akmal',
+          detail: '2026-yil 29-may kuni ertalabki soat 09:00 dagi majlisga 30 daqiqa kechikib keldim. Sababi uyim oldidagi yo\'lda avtotransport hodisasi tufayli katta tirbandlik yuzaga keldi.'
+        };
+      case 'tavsifnoma':
+        return {
+          to: 'Tegishli joyga taqdim etish uchun',
+          from: '"Texno-Inovatika" MCHJ rahbariyati',
+          detail: 'Xodim Salimov Umid o\'z faoliyati davomida o\'zini intizomli, bilimli va jamoada hurmatga sazovor mutaxassis sifatida ko\'rsatdi. Hech qanday intizomiy jazo choralariga tortilmagan.'
+        };
+      case 'shartnoma':
+        return {
+          to: 'Sotuvchi: Rahimov Sobir (Pasport AB 1234567, Toshkent sh.)',
+          from: 'Sotib oluvchi: Karimov Akmal (Pasport AC 7654321, Toshkent sh.)',
+          detail: 'Chevrolet Lacetti avtotransport vositasi (Davlat raqami 01 A 777 AA) jami 120,000,000 (bir yuz yirma million) so\'m evaziga sotilmoqda. To\'lov 3 ish kuni ichida amalga oshiriladi.'
+        };
+      case 'bildirgi':
+        return {
+          to: 'Kadrlar bo\'limi boshlig\'i M.V. Shohalilovaga',
+          from: 'Guruh rahbari Soliyev Bobur',
+          detail: 'Axborot xavfsizligi bo\'limi xodimi Ergashev G\'ayrat o\'z lavozim majburiyatlarini bir necha bor buzganligi va ish vaqtida asossiz yo\'q bo\'lganligi haqida bildirish xati.'
+        };
+      case 'malumotnoma':
+        return {
+          to: 'Chilonzor tumani hokimiyati bandlik bo\'limiga',
+          from: 'Fuqaro Usmonova Laylo',
+          detail: 'Fuqaro Usmonova Layloning ushbu tashkilotda 2024-yildan beri bosh hisobchi yordamchisi lavozimida haqiqatdan ham ishlab kelayotganligi va oylik o\'rtacha maoshi 4,500,000 so\'m ekanligi haqida ma\'lumotnoma'
+        };
+      case 'free':
+      default:
+        return {
+          to: 'Bosh boshqarma boshlig\'iga',
+          from: 'Fuqaro Yo\'ldoshev Nodir',
+          detail: 'menga 3 kunlik oilaviy sabablarga ko\'ra mehnat ta\'tili berishingizni so\'rayman'
+        };
     }
+  };
 
-    setTimeout(async () => {
-      try {
-        const docBlob = await createSimpleDocx(documentContent.trim());
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(docBlob);
-        link.download = `${selectedTemplate}_rasmiy_${Date.now()}.docx`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        setGeneratingDoc(false);
-      } catch (err) {
-        console.error(err);
-        setGeneratingDoc(false);
+  const getLocalDraftText = (type: string, to: string, from: string, detail: string) => {
+    const cleanTo = to.trim();
+    const cleanFrom = from.trim();
+    const cleanDetail = detail.trim();
+    const dateStr = new Date().toLocaleDateString('uz-UZ');
+
+    switch (type) {
+      case 'ariza':
+        return `                                            ${cleanTo}
+                                            ${cleanFrom}
+
+                                   ARIZA
+
+      Sizdan, ${cleanDetail} so'rayman.
+
+      Ariza mazmuni qonuniy va rasmiy munosabatlar qoidalariga rioya qilgan holda tuzildi.
+
+      Sana: ${dateStr}
+      Imzo: _____________________`;
+      case 'tushuntirish':
+        return `                                            ${cleanTo}
+                                            ${cleanFrom}
+
+                             TUSHUNTIRISH XATI
+
+      Men, ushbu tushuntirish xatini yozib shuni ma'lum qilamanki, ${cleanDetail}.
+
+      Keltirilgan holatlar haqiqat ekanligini tasdiqlayman va kelgusida bunday kamchiliklar takrorlanmasligiga va'da beraman.
+
+      Sana: ${dateStr}
+      Imzo: _____________________`;
+      case 'tavsifnoma':
+        return `                                  TAVSIFNOMA
+                              (Xodim tavsifnomasi)
+
+      Ushbu tavsifnoma ${cleanTo} taqdim etish uchun ${cleanFrom} tomonidan berildi.
+
+      Xodim to'g'risida ma'lumot: ${cleanDetail}.
+
+      Mazkur tavsifnoma uning talabiga binoan berildi.
+
+      Sana: ${dateStr}
+      Boshqaruv imzosi: _____________________`;
+      case 'shartnoma':
+        return `                                  SHARTNOMA
+                              (Oldi-sotdi bitimi)
+
+      Toshkent shahri                                                   Sana: ${dateStr}
+
+      Biz, bir tomondan ${cleanTo}, va ikkinchi tomondan ${cleanFrom}, kelishilgan holda ushbu shartnomani imzoladik:
+
+      1. Shartnoma predmeti: ${cleanDetail}.
+
+      2. Bitim bo'yicha majburiyatlar to'liq va o'z vaqtida bajarilishiga tomonlar kafolat beradilar.
+
+      Tomonlar imzolari:
+      Sotuvchi: _________________            Sotib oluvchi: _________________`;
+      case 'bildirgi':
+        return `                                            ${cleanTo}
+                                            ${cleanFrom}
+
+                                  BILDIRGI
+                             (Doklad xati)
+
+      Sizga shuni ma'lum qilamanki, ${cleanDetail}.
+
+      Yuqoridagilarni inobatga olgan holda, zarur choralar ko'rishingizni so'rayman.
+
+      Sana: ${dateStr}
+      Xodim imzosi: _____________________`;
+      case 'malumotnoma':
+        return `                                  MA'LUMOTNOMA
+
+      Ushbu ma'lumotnoma ${cleanTo} taqdim etish uchun ${cleanFrom} muomalasiga binoan berildi.
+
+      Tarkibi: ${cleanDetail}.
+
+      Sana: ${dateStr}
+      Mas'ul xodim imzosi: _____________________
+      M.O'. (Muhra o'rniga)`;
+      case 'free':
+      default:
+        return `                                            ${cleanTo}
+                                            ${cleanFrom}
+
+                               RASMIY HUJJAT
+
+      Murojaat mazmuni:
+      ${cleanDetail}
+
+      Ushbu hujjat professional tarzda tizim yordamida shakllantirilgan.
+
+      Sana: ${dateStr}
+      Imzo: _____________________`;
+    }
+  };
+
+  // Sync draft on load or template switch
+  React.useEffect(() => {
+    const defaults = getTemplateDefaults(selectedTemplate);
+    setDocTo(defaults.to);
+    setDocFrom(defaults.from);
+    setDocDetail(defaults.detail);
+    
+    const draftText = getLocalDraftText(selectedTemplate, defaults.to, defaults.from, defaults.detail);
+    setGeneratedDocText(draftText);
+    setIsAiGenerated(false);
+  }, [selectedTemplate]);
+
+  // Sync draft when simple inputs change, only if it is NOT yet AI generated
+  React.useEffect(() => {
+    if (!isAiGenerated) {
+      setGeneratedDocText(getLocalDraftText(selectedTemplate, docTo, docFrom, docDetail));
+    }
+  }, [docTo, docFrom, docDetail, isAiGenerated, selectedTemplate]);
+
+  // Connects directly to backend Gemini Document generation
+  const handleGenerateTemplateWord = async () => {
+    if (!generatedDocText) return;
+    setGeneratingDoc(true);
+    try {
+      const docBlob = await createSimpleDocx(generatedDocText);
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(docBlob);
+      link.download = `${selectedTemplate}_hujjat_${Date.now()}.docx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setGeneratingDoc(false);
+    }
+  };
+
+  const handleGenDoc = async () => {
+    setIsGeneratingDocText(true);
+    setErrorMessage('');
+    try {
+      const res = await fetch('/api/gemini/document', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          templateType: selectedTemplate,
+          to: docTo,
+          from: docFrom,
+          detail: docDetail
+        })
+      });
+
+      if (!res.ok) {
+        throw new Error('AI Server call failed');
       }
-    }, 1000);
+
+      const data = await res.json();
+      if (data.output) {
+        setGeneratedDocText(data.output);
+        setIsAiGenerated(true);
+      } else {
+        setGeneratedDocText(getLocalDraftText(selectedTemplate, docTo, docFrom, docDetail));
+      }
+    } catch (err) {
+      console.error(err);
+      setErrorMessage("Gemini AI bilan ulanib bo'lmadi. Offline shablon shakllantirildi.");
+      setGeneratedDocText(getLocalDraftText(selectedTemplate, docTo, docFrom, docDetail));
+    } finally {
+      setIsGeneratingDocText(false);
+    }
+  };
+
+  const handlePrint = () => {
+    if (!generatedDocText) return;
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert("Iltimos, qalqib chiquvchi oynalar (popup) ochilishiga ruxsat bering.");
+      return;
+    }
+    
+    const isHandwriting = docPreviewMode === 'handwriting';
+    const penColor = handwritingStyle === 'blue' ? '#1d4ed8' : '#1e293b';
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>A4 Chop Etish - Hujjat.uz</title>
+          <link rel="preconnect" href="https://fonts.googleapis.com">
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+          <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=Marck+Script&display=swap" rel="stylesheet">
+          <style>
+            @media print {
+              @page {
+                size: A4;
+                margin: 20mm;
+              }
+              body {
+                margin: 0;
+                padding: 0;
+                background: #fff;
+              }
+              .a4-container {
+                border: none !important;
+                box-shadow: none !important;
+                padding: 0 !important;
+                width: 100% !important;
+                height: auto !important;
+              }
+            }
+            body {
+              font-family: 'Times New Roman', Times, serif;
+              background-color: #f1f5f9;
+              margin: 0;
+              padding: 20px;
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              min-height: 100vh;
+            }
+            .a4-container {
+              background: white;
+              width: 210mm;
+              min-height: 297mm;
+              padding: 20mm 25mm 20mm 25mm;
+              box-sizing: border-box;
+              border: 1px solid #cbd5e1;
+              box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+              white-space: pre-wrap;
+              word-wrap: break-word;
+              position: relative;
+            }
+            .computer {
+              font-family: 'Times New Roman', Times, serif;
+              font-size: 14pt;
+              line-height: 1.6;
+              color: #000;
+            }
+            .handwriting {
+              font-family: 'Caveat', cursive;
+              font-size: 20pt;
+              line-height: 1.5;
+              color: ${penColor};
+              transform: rotate(-0.5deg);
+              letter-spacing: 0.5px;
+            }
+            .lines-background {
+              position: absolute;
+              top: 0;
+              left: 0;
+              right: 0;
+              bottom: 0;
+              background-image: linear-gradient(#e2e8f0 1px, transparent 1px);
+              background-size: 100% 32px;
+              pointer-events: none;
+              opacity: 0.15;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="a4-container \${isHandwriting ? 'handwriting' : 'computer'}">
+            \${isHandwriting ? '<div class="lines-background"></div>' : ''}
+            <div>\${generatedDocText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\\n/g, '<br/>')}</div>
+          </div>
+          <script>
+            window.onload = function() {
+              setTimeout(function() {
+                window.print();
+              }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
   const handleSummarize = async () => {
     if (!sumText.trim()) return;
     setIsSummarizing(true);
+    setSumOutput('');
     try {
       const res = await fetch('/api/gemini/summarize', {
         method: 'POST',
@@ -240,20 +379,14 @@ export default function AiCenter({ currentLang, theme = 'dark' }: AiCenterProps)
         body: JSON.stringify({ text: sumText, lang: currentLang === 'uz' ? 'uz' : 'ru' }),
       });
       if (!res.ok) {
-        throw new Error('API request failed');
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || "Tahlil xizmati muvaffaqiyatsiz tugadi");
       }
       const data = await res.json();
       setSumOutput(data.output || "Natija kutilmagan formatda qaytdi.");
-    } catch (err) {
-      console.warn("Real Gemini fetch failed, falling back to local analysis model:", err);
-      setTimeout(() => {
-        const summary = `### MUHIM MAZMUN KONSPEKTI:\n\n` +
-          `1. **Asosiy yo'nalishlar**: Matnda ko'tarilgan bosh mavzu hujjat va uning shakliy qismlarini o'z ichiga oladi (~${Math.floor(sumText.length / 5)} so'z tahlili).\n` +
-          `2. **Tahliliy xulosa**: Berilgan kontentda bayon etilgan mantiqiy silsila professional va qat'iy muloqot standartlariga javob beradi.\n` +
-          `3. **Muhim bayonlar**: Matn ichidagi asosiy kalit so'zlar: "${sumText.split(' ').slice(0, 3).join(', ')}".\n\n` +
-          `*Konspektlashtirish o'zbek korpusi tahlili bo'yicha yakunlandi. (Katta darsliklar uchun Gemini AI proksi ulanishidan foydalaning)*`;
-        setSumOutput(summary);
-      }, 1000);
+    } catch (err: any) {
+      console.error("Gemini summarization failed:", err);
+      setSumOutput("Konspektlashtirish xizmati vaqtincha ishlamayapti. Iltimos, API kalitingiz to'g'riligini tekshiring va birozdan keyin qayta urinib ko'ring.");
     } finally {
       setIsSummarizing(false);
     }
@@ -277,26 +410,14 @@ export default function AiCenter({ currentLang, theme = 'dark' }: AiCenterProps)
         }),
       });
       if (!res.ok) {
-        throw new Error('API request failed');
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || "Savolga javob berish muvaffaqiyatsiz bo'ldi");
       }
       const data = await res.json();
       setMessages(prev => [...prev, { sender: 'bot', text: data.text || "Uzr, savolingizga javob olishda xatolik yuz berdi." }]);
-    } catch (err) {
-      console.warn("Real Gemini chat failed, falling back to local model:", err);
-      setTimeout(() => {
-        let botReply = '';
-        const lowercaseQuery = userQuery.toLowerCase();
-
-        if (lowercaseQuery.includes('nima') || lowercaseQuery.includes('haqida')) {
-          botReply = "Ushbu hujjat doirasida asosan rasmiy muloqot, o'zaro shartnomaviy majburiyatlar va huquqiy munosabatlar bayon etilganligi aniqlandi.";
-        } else if (lowercaseQuery.includes('rahbar') || lowercaseQuery.includes('kim')) {
-          botReply = "Hujjatga ko'ra, korxonada rasmiy rahbarlik yoki vakolatli organ tomonidan tayinlangan vakillar asosiy ma'sul xisoblanadi.";
-        } else {
-          botReply = `Hujjatni ishonchli tahlil qilish natijasida so'rovingizga javob: "${userQuery}" iborasi matn sarlavhasi ostidagi faol qismlarda uchrashi mumkin.`;
-        }
-
-        setMessages(prev => [...prev, { sender: 'bot', text: botReply }]);
-      }, 800);
+    } catch (err: any) {
+      console.error("Gemini chat failed:", err);
+      setMessages(prev => [...prev, { sender: 'bot', text: "Yordamchi vaqtincha offline rejimda. Iltimos, ulanish tarmoqlari va API kalit sozlamalarini tekshiring hamda birozdan keyin qayta yozib ko'ring." }]);
     } finally {
       setIsAgentReplying(false);
     }
@@ -369,251 +490,241 @@ export default function AiCenter({ currentLang, theme = 'dark' }: AiCenterProps)
                     <FileText className="w-5 h-5" />
                   </span>
                   <div>
-                    <h3 className={`text-base font-bold font-display ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{t.templateInputHeader}</h3>
-                    <p className={`text-xs mt-0.5 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>{t.templateInputDesc}</p>
+                    <h3 className={`text-base font-bold font-display ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Tizim Shablonlari</h3>
+                    <p className={`text-xs mt-0.5 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-550'}`}>Kerakli hujjat turini tanlang, malumotlarni kiritib AI yordamida rasmiylashtiring</p>
                   </div>
                 </div>
 
                 {/* Templates choices */}
-                <div className={`grid grid-cols-3 gap-2 p-1 border rounded-2xl ${
-                  theme === 'dark' ? 'bg-slate-950/20 border-slate-800' : 'bg-slate-100 border-slate-200'
-                }`}>
-                  <button
-                    onClick={() => setSelectedTemplate('ariza')}
-                    className={`p-3 rounded-xl text-xs font-bold transition cursor-pointer ${
-                      selectedTemplate === 'ariza' 
-                        ? 'bg-indigo-600 border border-indigo-650 text-white shadow' 
-                        : theme === 'dark' ? 'text-slate-400 hover:text-slate-250 hover:bg-slate-900/60' : 'text-slate-500 hover:text-slate-905 hover:bg-slate-200'
-                    }`}
-                  >
-                    {t.arizaShort}
-                  </button>
-                  <button
-                    onClick={() => setSelectedTemplate('tavsifnoma')}
-                    className={`p-3 rounded-xl text-xs font-bold transition cursor-pointer ${
-                      selectedTemplate === 'tavsifnoma' 
-                        ? 'bg-indigo-600 border border-indigo-650 text-white shadow' 
-                        : theme === 'dark' ? 'text-slate-400 hover:text-slate-250 hover:bg-slate-900/60' : 'text-slate-500 hover:text-slate-905 hover:bg-slate-200'
-                    }`}
-                  >
-                    {t.tavsifnomaShort}
-                  </button>
-                  <button
-                    onClick={() => setSelectedTemplate('shartnoma')}
-                    className={`p-3 rounded-xl text-xs font-bold transition cursor-pointer ${
-                      selectedTemplate === 'shartnoma' 
-                        ? 'bg-indigo-600 border border-indigo-650 text-white shadow' 
-                        : theme === 'dark' ? 'text-slate-400 hover:text-slate-250 hover:bg-slate-900/60' : 'text-slate-500 hover:text-slate-905 hover:bg-slate-200'
-                    }`}
-                  >
-                    {t.shartnomaShort}
-                  </button>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                  {[
+                    { id: 'ariza', label: 'Ariza (Ta\'til, bo\'shash...)' },
+                    { id: 'tushuntirish', label: 'Tushuntirish xati' },
+                    { id: 'tavsifnoma', label: 'Tavsifnoma' },
+                    { id: 'shartnoma', label: 'Shartnoma' },
+                    { id: 'bildirgi', label: 'Bildirgi (Dokladная)' },
+                    { id: 'malumotnoma', label: 'Ma\'lumotnoma berish' },
+                    { id: 'free', label: 'Boshqa / Erkin tur (AI)' },
+                  ].map((tmpl) => (
+                    <button
+                      key={tmpl.id}
+                      onClick={() => setSelectedTemplate(tmpl.id)}
+                      className={`p-2.5 rounded-xl text-[11px] font-bold transition cursor-pointer text-center duration-150 ${
+                        selectedTemplate === tmpl.id 
+                          ? 'bg-indigo-600 border border-indigo-650 text-white shadow shadow-indigo-600/20' 
+                          : theme === 'dark' 
+                            ? 'bg-slate-900 border border-slate-805 text-slate-400 hover:text-white hover:bg-slate-850' 
+                            : 'bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+                      }`}
+                    >
+                      {tmpl.label}
+                    </button>
+                  ))}
                 </div>
 
-                {/* Dynamic forms based on template */}
+                {/* Unified inputs section */}
                 <div className="space-y-4 pt-2">
-                  {selectedTemplate === 'ariza' && (
-                    <>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-[11px] font-bold font-mono text-slate-500 uppercase tracking-widest block mb-1.5">{t.arizaTo}</label>
-                          <input type="text" value={arizaDirector} onChange={(e) => setArizaDirector(e.target.value)} className={`w-full border rounded-xl px-3 py-2.5 text-xs ${
-                            theme === 'dark' ? 'bg-slate-900 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                          }`} />
-                        </div>
-                        <div>
-                          <label className="text-[11px] font-bold font-mono text-slate-500 uppercase tracking-widest block mb-1.5">{t.companyName}</label>
-                          <input type="text" value={arizaCompany} onChange={(e) => setArizaCompany(e.target.value)} className={`w-full border rounded-xl px-3 py-2.5 text-xs ${
-                            theme === 'dark' ? 'bg-slate-900 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                          }`} />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="text-[11px] font-bold font-mono text-slate-500 uppercase tracking-widest block mb-1.5">{t.arizaAuthor}</label>
-                        <input type="text" value={arizaAuthor} onChange={(e) => setArizaAuthor(e.target.value)} className={`w-full border rounded-xl px-3 py-2.5 text-xs ${
-                          theme === 'dark' ? 'bg-slate-900 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                        }`} />
-                      </div>
-                      <div>
-                        <label className="text-[11px] font-bold font-mono text-slate-500 uppercase tracking-widest block mb-1.5">{t.arizaDetail}</label>
-                        <textarea value={arizaDetail} onChange={(e) => setArizaDetail(e.target.value)} rows={3} className={`w-full border rounded-xl p-3 text-xs resize-none ${
-                          theme === 'dark' ? 'bg-slate-900 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-905'
-                        }`} />
-                      </div>
-                    </>
-                  )}
+                  <div>
+                    <label className="text-[11px] font-bold font-mono text-slate-500 uppercase tracking-widest block mb-1.5">
+                      {selectedTemplate === 'shartnoma' ? 'SOTUVCHI (Birinchi tomon)' : 'Kimga (Kompaniya nomi yoki rahbar lavozimi, ismi)'}
+                    </label>
+                    <input 
+                      type="text" 
+                      value={docTo} 
+                      onChange={(e) => setDocTo(e.target.value)} 
+                      className={`w-full border rounded-xl px-3 py-2.5 text-xs focus:ring-1 focus:ring-indigo-550 focus:outline-none focus:border-indigo-550 ${
+                        theme === 'dark' ? 'bg-slate-900 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900 font-medium'
+                      }`} 
+                      placeholder="Masalan: 'Mega Texnoloji' MCHJ direktori A.B. Toshmatovga"
+                    />
+                  </div>
 
-                  {selectedTemplate === 'tavsifnoma' && (
-                    <>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-[11px] font-bold font-mono text-slate-500 uppercase tracking-widest block mb-1.5">{t.tavAuthor}</label>
-                          <input type="text" value={tavAuthor} onChange={(e) => setTavAuthor(e.target.value)} className={`w-full border rounded-xl px-3 py-2.5 text-xs ${
-                            theme === 'dark' ? 'bg-slate-900 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                          }`} />
-                        </div>
-                        <div>
-                          <label className="text-[11px] font-bold font-mono text-slate-500 uppercase tracking-widest block mb-1.5">{t.tavPosition}</label>
-                          <input type="text" value={tavPosition} onChange={(e) => setTavPosition(e.target.value)} className={`w-full border rounded-xl px-3 py-2.5 text-xs ${
-                            theme === 'dark' ? 'bg-slate-900 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                          }`} />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="text-[11px] font-bold font-mono text-slate-500 uppercase tracking-widest block mb-1.5">{t.tavDetail}</label>
-                        <textarea value={tavDetail} onChange={(e) => setTavDetail(e.target.value)} rows={4} className={`w-full border rounded-xl p-3 text-xs resize-none ${
-                          theme === 'dark' ? 'bg-slate-900 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                        }`} />
-                      </div>
-                    </>
-                  )}
+                  <div>
+                    <label className="text-[11px] font-bold font-mono text-slate-505 uppercase tracking-widest block mb-1.5">
+                      {selectedTemplate === 'shartnoma' ? 'SOTIB OLUVCHI (Ikkinchi tomon)' : 'Kimdan (Sizning ism-familiyangiz va lavozimingiz)'}
+                    </label>
+                    <input 
+                      type="text" 
+                      value={docFrom} 
+                      onChange={(e) => setDocFrom(e.target.value)} 
+                      className={`w-full border rounded-xl px-3 py-2.5 text-xs focus:ring-1 focus:ring-indigo-550 focus:outline-none focus:border-indigo-550 ${
+                        theme === 'dark' ? 'bg-slate-900 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900 font-medium'
+                      }`} 
+                      placeholder="Masalan: 'Dasturchi' lavozimidagi Karimov Akmal tomonidan"
+                    />
+                  </div>
 
-                  {selectedTemplate === 'shartnoma' && (
-                    <>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-[11px] font-bold font-mono text-slate-500 uppercase block mb-1.5">{t.shartSeller}</label>
-                          <input type="text" value={shartSeller} onChange={(e) => setShartSeller(e.target.value)} className={`w-full border rounded-xl px-3 py-2.5 text-xs ${
-                            theme === 'dark' ? 'bg-slate-900 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                          }`} />
-                        </div>
-                        <div>
-                          <label className="text-[11px] font-bold font-mono text-slate-500 uppercase block mb-1.5">{t.shartBuyer}</label>
-                          <input type="text" value={shartBuyer} onChange={(e) => setShartBuyer(e.target.value)} className={`w-full border rounded-xl px-3 py-2.5 text-xs ${
-                            theme === 'dark' ? 'bg-slate-900 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                          }`} />
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-[11px] font-bold font-mono text-slate-500 block mb-1.5">{t.shartProduct}</label>
-                          <input type="text" value={shartProduct} onChange={(e) => setShartProduct(e.target.value)} className={`w-full border rounded-xl px-3 py-2.5 text-xs ${
-                            theme === 'dark' ? 'bg-slate-900 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                          }`} />
-                        </div>
-                        <div>
-                          <label className="text-[11px] font-bold font-mono text-slate-500 block mb-1.5">{t.shartPrice}</label>
-                          <input type="text" value={shartPrice} onChange={(e) => setShartPrice(e.target.value)} className={`w-full border rounded-xl px-3 py-2.5 text-xs ${
-                            theme === 'dark' ? 'bg-slate-900 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                          }`} />
-                        </div>
-                      </div>
-                    </>
-                  )}
+                  <div>
+                    <label className="text-[11px] font-bold font-mono text-slate-505 uppercase tracking-widest block mb-1.5">
+                      {selectedTemplate === 'free' ? 'Hujjat mazmuni va siz so\'rayotgan narsa (Erkin tilda yozing, AI o\'zi mukammal qiladi)' : 'Batafsil sabab yoki tafsilotlar'}
+                    </label>
+                    <textarea 
+                      value={docDetail} 
+                      onChange={(e) => setDocDetail(e.target.value)} 
+                      rows={4} 
+                      className={`w-full border rounded-xl p-3 text-xs resize-none focus:ring-1 focus:ring-indigo-550 focus:outline-none focus:border-indigo-550 ${
+                        theme === 'dark' ? 'bg-slate-900 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-905 font-medium'
+                      }`} 
+                      placeholder={selectedTemplate === 'free' ? "Masalan: menga 3 kun oilaviy sharoitimga ko'ra oyliksiz tatil berishlarini so'rab ariza yozib ber." : "Masalan: dushanba kuni oilaviy masalalar tufayli 1 soat kechikish yuz berganligi to'g'risida..."}
+                    />
+                  </div>
                 </div>
 
-                <button
-                  onClick={handleGenerateTemplateWord}
-                  disabled={generatingDoc}
-                  className="w-full py-4 bg-gradient-to-r from-indigo-500 to-indigo-650 hover:from-indigo-600 hover:to-indigo-700 font-bold text-white rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20 duration-200 active:scale-98 cursor-pointer"
-                >
-                  {generatingDoc ? t.preparingDoc : t.generateAndDownload}
-                  <Download className="w-4 h-4" />
-                </button>
+                <div className="space-y-2 pt-2">
+                  <button
+                    onClick={handleGenDoc}
+                    disabled={isGeneratingDocText || !docDetail.trim()}
+                    className="w-full py-4 bg-gradient-to-r from-violet-600 to-indigo-650 hover:from-violet-700 hover:to-indigo-700 font-bold text-white rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/10 hover:shadow-indigo-600/20 duration-200 active:scale-98 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isGeneratingDocText ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin text-white" />
+                        <span>AI HUJJAT MATNINI SAYQALLAMOQDA...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4 text-violet-200" />
+                        <span>HUJJATNI AI BILAN TAYYORLASH ✨</span>
+                      </>
+                    )}
+                  </button>
+
+                  {errorMessage && (
+                    <div className="p-3 text-xs bg-red-500/10 border border-red-500/15 rounded-xl text-red-500 flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 shrink-0" />
+                      <span>{errorMessage}</span>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Right document layout visual preview */}
-              <div className={`flex-1 border p-6 flex flex-col justify-between max-w-md rounded-2xl ${
-                theme === 'dark' ? 'bg-slate-950/20 border-slate-800' : 'bg-slate-50 border-slate-200'
-              }`}>
-                <div className="space-y-4">
-                  <div className={`flex items-center justify-between text-xs font-mono border-b pb-2 ${
-                    theme === 'dark' ? 'text-slate-400 border-slate-800' : 'text-slate-600 border-slate-200'
-                  }`}>
-                    <span>{t.previewTitle}</span>
-                    <span className="text-indigo-650 font-bold dark:text-indigo-400">{t.wordKit}</span>
+              <div className="flex-1 space-y-4">
+                {/* Controls at top of preview */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900/40 dark:bg-slate-950/20 p-2 rounded-2xl border border-slate-800">
+                  <div className="flex p-0.5 rounded-xl bg-slate-950/60 border border-slate-850 gap-1">
+                    <button
+                      onClick={() => setDocPreviewMode('computer')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        docPreviewMode === 'computer' 
+                          ? 'bg-indigo-600 text-white shadow' 
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      Kompyuter yozuvi
+                    </button>
+                    <button
+                      onClick={() => setDocPreviewMode('handwriting')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        docPreviewMode === 'handwriting' 
+                          ? 'bg-indigo-600 text-white shadow' 
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      Qo'l yozuvi (Ruchka)
+                    </button>
                   </div>
+
+                  {docPreviewMode === 'handwriting' && (
+                    <div className="flex items-center gap-1.5 px-2">
+                      <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest">Ruchka siyohi:</span>
+                      <button
+                        onClick={() => setHandwritingStyle('blue')}
+                        className={`w-5 h-5 rounded-full bg-blue-600 border-2 transition cursor-pointer ${
+                          handwritingStyle === 'blue' ? 'border-white scale-110' : 'border-transparent opacity-70'
+                        }`}
+                        title="Ko'k siyoh"
+                      />
+                      <button
+                        onClick={() => setHandwritingStyle('black')}
+                        className={`w-5 h-5 rounded-full bg-slate-900 border-2 transition cursor-pointer ${
+                          handwritingStyle === 'black' ? 'border-white scale-110' : 'border-transparent opacity-70'
+                        }`}
+                        title="Qora siyoh"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* A4 Document sheet cardboard with aspect standard proportion */}
+                <div className="relative w-full aspect-[1/1.4142] rounded-2xl border bg-white shadow-xl p-8 sm:p-10 flex flex-col overflow-hidden transition-all duration-300 border-slate-200 shadow-slate-100 bg-mesh-grid-light">
+                  {/* Page Lines Background for Handwriting */}
+                  {docPreviewMode === 'handwriting' && (
+                    <div className="absolute inset-0 opacity-45 pointer-events-none" style={{
+                      backgroundImage: 'linear-gradient(#e2e8f0 1px, transparent 1px)',
+                      backgroundSize: '100% 30px',
+                      marginTop: '34px'
+                    }} />
+                  )}
+
+                  {/* Content editing Workspace */}
+                  <textarea
+                    value={generatedDocText}
+                    onChange={(e) => {
+                      setGeneratedDocText(e.target.value);
+                      setIsAiGenerated(true); // Don't snap back when typed manually
+                    }}
+                    className={`w-full h-full bg-transparent resize-none border-none outline-none focus:ring-0 focus:outline-none focus:border-transparent text-xs sm:text-sm leading-relaxed p-0 whitespace-pre-wrap ${
+                      docPreviewMode === 'handwriting' 
+                        ? 'font-handwriting font-bold tracking-wide italic text-lg sm:text-xl' 
+                        : 'font-serif text-slate-900'
+                    }`}
+                    style={{
+                      fontFamily: docPreviewMode === 'handwriting' ? '"Caveat", cursive' : '"Times New Roman", Times, serif',
+                      color: docPreviewMode === 'handwriting' 
+                        ? (handwritingStyle === 'blue' ? '#1d4ed8' : '#1e293b') 
+                        : '#0f172a',
+                      transform: docPreviewMode === 'handwriting' ? 'rotate(-0.5deg)' : 'none',
+                      lineHeight: docPreviewMode === 'handwriting' ? '1.8' : '1.7'
+                    }}
+                    placeholder="Hujjat matni bu yerda shakllanadi..."
+                  />
+
+                  {/* Watermark badge or edit info */}
+                  <div className="absolute bottom-4 right-4 flex items-center gap-1.5 text-[9px] font-mono text-slate-400 select-none pointer-events-none">
+                    {isAiGenerated ? (
+                      <span className="flex items-center gap-1 text-violet-500 font-bold">
+                        <Sparkles className="w-3 h-3" /> Gemini AI sayqallagan
+                      </span>
+                    ) : (
+                      <span>Offline asofandiza (Tahrirlash mumkin)</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* A4 Save and Print Controls */}
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    onClick={handlePrint}
+                    className="py-3 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-800 duration-150 flex flex-col items-center justify-center gap-1 transition-all border border-slate-200 shadow-sm cursor-pointer"
+                  >
+                    <RefreshCw className="w-4 h-4 text-indigo-650" />
+                    <span>Printerda chop etish</span>
+                  </button>
                   
-                  {/* Dynamic draft viewer */}
-                  <div className={`border p-4 rounded-xl text-[10px] sm:text-xs font-mono leading-relaxed space-y-3 min-h-[220px] shadow-sm ${
-                    theme === 'dark' ? 'bg-slate-950/35 border-slate-850 text-slate-350' : 'bg-white border-slate-200 text-slate-800'
-                  }`}>
-                    {selectedTemplate === 'ariza' && (
-                      <>
-                        {currentLang === 'ru' ? (
-                          <>
-                            <p className="text-right">Директору {arizaCompany}<br />{arizaDirector}</p>
-                            <p className="text-right">от {arizaAuthor}</p>
-                            <h4 className={`text-center font-bold text-sm my-3 ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>ЗАЯВЛЕНИЕ</h4>
-                            <p className="indent-4 leading-loose">Я, {arizaAuthor}, в этом заявлении прошу вас {arizaDetail}.</p>
-                          </>
-                        ) : currentLang === 'en' ? (
-                          <>
-                            <p className="text-right">To Director of {arizaCompany}<br />{arizaDirector}</p>
-                            <p className="text-right">From {arizaAuthor}</p>
-                            <h4 className={`text-center font-bold text-sm my-3 ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>APPLICATION</h4>
-                            <p className="indent-4 leading-loose">I, {arizaAuthor}, hereby request you {arizaDetail}.</p>
-                          </>
-                        ) : (
-                          <>
-                            <p className="text-right">{arizaCompany} direktori<br />{arizaDirector}ga</p>
-                            <p className="text-right">{arizaAuthor}dan</p>
-                            <h4 className={`text-center font-bold text-sm my-3 ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>ARIZA</h4>
-                            <p className="indent-4 leading-loose">Men {arizaAuthor}, ushbu ariza orqali sizdan {arizaDetail} so'rayman.</p>
-                          </>
-                        )}
-                      </>
-                    )}
+                  <button
+                    onClick={handlePrint}
+                    title="Hujjatni PDF shaklida kompyuterga saqlash"
+                    className="py-3 rounded-xl bg-indigo-600/10 border border-indigo-500/20 hover:bg-indigo-600/15 text-indigo-650 font-bold text-xs flex flex-col items-center justify-center gap-1 duration-150 transition-all cursor-pointer"
+                  >
+                    <Download className="w-4 h-4 text-indigo-650" />
+                    <span>PDF saqlash</span>
+                  </button>
 
-                    {selectedTemplate === 'tavsifnoma' && (
-                      <>
-                        <h4 className={`text-center font-bold text-sm my-3 ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
-                          {currentLang === 'ru' ? 'ХАРАКТЕРИСТИКА' : currentLang === 'en' ? 'RECOMMENDATION' : 'TAVSIFNOMA'}
-                        </h4>
-                        {currentLang === 'ru' ? (
-                          <>
-                            <p className="indent-4 leading-loose">Данная характеристика выдается руководством {arizaCompany || '"Mega Texnoloji" MCHJ'} сотруднику {tavAuthor}. Сотрудник работает на должности "{tavPosition}" в нашей компании.</p>
-                            <p className="indent-4 leading-loose">За прошедший период работы он показал себя как: {tavDetail}</p>
-                          </>
-                        ) : currentLang === 'en' ? (
-                          <>
-                            <p className="indent-4 leading-loose">This recommendation is issued by the management of {arizaCompany || '"Mega Texnoloji" MCHJ'} to {tavAuthor}. The employee is working as "{tavPosition}" in our company.</p>
-                            <p className="indent-4 leading-loose">During the employment period, they demonstrated: {tavDetail}</p>
-                          </>
-                        ) : (
-                          <>
-                            <p className="indent-4 leading-loose">Ushbu tavsifnoma {arizaCompany || '"Mega Texnoloji" MCHJ'} rahbariyati tomonidan {tavAuthor}ga taqdim etiladi. Xodim korxonada "{tavPosition}" lavozimida faoliyat yuritadi.</p>
-                            <p className="indent-4 leading-loose">U o'tgan mehnat davri mobaynida: {tavDetail}</p>
-                          </>
-                        )}
-                      </>
-                    )}
-
-                    {selectedTemplate === 'shartnoma' && (
-                      <>
-                        <h4 className={`text-center font-bold text-sm my-3 ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
-                          {currentLang === 'ru' ? 'ДОГОВОР КУПЛИ-ПРОДАЖИ' : currentLang === 'en' ? 'SALE CONTRACT' : 'SHARTNOMA'}
-                        </h4>
-                        {currentLang === 'ru' ? (
-                          <>
-                            <p>Продавец: {shartSeller}</p>
-                            <p>Покупатель: {shartBuyer}</p>
-                            <p className="leading-loose">1. Согласно договору, Продавец продал принадлежащий ему {shartProduct} на общую сумму {shartPrice}.</p>
-                          </>
-                        ) : currentLang === 'en' ? (
-                          <>
-                            <p>Seller: {shartSeller}</p>
-                            <p>Buyer: {shartBuyer}</p>
-                            <p className="leading-loose">1. Under this contract, the Seller sold their owned {shartProduct} for a total price of {shartPrice}.</p>
-                          </>
-                        ) : (
-                          <>
-                            <p>Sotuvchi: {shartSeller}</p>
-                            <p>Sotib oluvchi: {shartBuyer}</p>
-                            <p className="leading-loose">1. Bitim hujjati bo'yicha Sotuvchi o'ziga tegishli {shartProduct}ni jami {shartPrice} evaziga sotdi.</p>
-                          </>
-                        )}
-                      </>
-                    )}
-                  </div>
+                  <button
+                    onClick={handleGenerateTemplateWord}
+                    disabled={generatingDoc}
+                    className="py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex flex-col items-center justify-center gap-1 duration-150 transition-all cursor-pointer"
+                  >
+                    <FileText className="w-4 h-4 text-indigo-200" />
+                    <span>Word (.docx) yuklash</span>
+                  </button>
                 </div>
 
-                <div className={`mt-5 flex items-center gap-2.5 text-[10px] font-mono p-3 rounded-lg border ${
-                  theme === 'dark' ? 'bg-slate-900 border-slate-800 text-slate-500' : 'bg-indigo-50/50 border-indigo-100 text-indigo-750'
-                }`}>
-                  <AlertCircle className="w-4 h-4 text-indigo-500 shrink-0" />
-                  <span>{t.editorTip}</span>
-                </div>
+                <p className="text-[10.5px] text-slate-500 text-center leading-relaxed">
+                  * <strong>PDF saqlash</strong> uchun chop etish ekranidan <strong>"Save as PDF"</strong> bandini tanlang. <br/>
+                  Hujjat chop etilganda mukammal A4 formatda bo'ladi va uning eng pastida imzongiz uchun bo'sh joy qoldirilgan.
+                </p>
               </div>
             </div>
           </div>

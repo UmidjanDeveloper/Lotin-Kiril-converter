@@ -3,11 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import TextConverter from './TextConverter';
 import FileConverter from './FileConverter';
 import { UI_TRANSLATIONS, Language } from '../utils/translations';
-import { Type, FileText, Globe2, Sparkles, BookOpen, Volume2, Copy, Check, ArrowRight, CornerDownLeft } from 'lucide-react';
+import { Type, FileText, Globe2, Sparkles, BookOpen, Volume2, VolumeX, Copy, Check, ArrowRight, CornerDownLeft } from 'lucide-react';
+import { latinToCyrillic, detectLanguage } from '../utils/translit';
 
 interface LanguageCenterProps {
   currentLang: Language;
@@ -34,6 +35,64 @@ export default function LanguageCenter({ currentLang, onFileProcessed, theme = '
   const [isPolishing, setIsPolishing] = useState(false);
   const [polishCopied, setPolishCopied] = useState(false);
 
+  // Text-to-Speech States
+  const [isPlayingInput, setIsPlayingInput] = useState(false);
+  const [isPlayingOutput, setIsPlayingOutput] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
+
+  const speakText = (text: string, isInput: boolean) => {
+    if (!window.speechSynthesis) return;
+
+    if (window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel();
+      setIsPlayingInput(false);
+      setIsPlayingOutput(false);
+      if ((isInput && isPlayingInput) || (!isInput && isPlayingOutput)) {
+        return;
+      }
+    }
+
+    if (!text.trim()) return;
+
+    // Convert to Cyrillic for Russian engine TTS
+    const isCyr = detectLanguage(text) === 'cyrillic';
+    const cyrText = isCyr ? text : latinToCyrillic(text);
+
+    // Clean systemic annotations like [AI Tarjima]
+    const cleanText = cyrText.replace(/\[.*?\]/g, '').replace(/\(.*?\)/g, '').trim();
+
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = "ru-RU";
+    utterance.rate = 0.95;
+
+    utterance.onend = () => {
+      if (isInput) setIsPlayingInput(false);
+      else setIsPlayingOutput(false);
+    };
+
+    utterance.onerror = () => {
+      if (isInput) setIsPlayingInput(false);
+      else setIsPlayingOutput(false);
+    };
+
+    if (isInput) {
+      setIsPlayingInput(true);
+      setIsPlayingOutput(false);
+    } else {
+      setIsPlayingOutput(true);
+      setIsPlayingInput(false);
+    }
+
+    window.speechSynthesis.speak(utterance);
+  };
+
   // Simple offline smart translations dictionary for testing and demonstration
   const LOCAL_DICT: Record<string, Record<string, string>> = {
     "salom": { uz: "Salom", ru: "Здравствуйте / Привет", en: "Hello / Hi", kk: "Сәлем", tr: "Merhaba" },
@@ -53,67 +112,87 @@ export default function LanguageCenter({ currentLang, onFileProcessed, theme = '
     "vatan": { uz: "Vatan", ru: "Родина", en: "Homeland", kk: "Отан", tr: "Vatan" }
   };
 
-  const handleTranslate = () => {
+  const handleTranslate = async () => {
     if (!transInput.trim()) return;
     setIsTranslating(true);
+    setTransOutput('');
     
-    setTimeout(() => {
+    try {
       const query = transInput.trim().toLowerCase().replace(/[?.!,]/g, '');
       const dictMatch = LOCAL_DICT[query];
       
-      let translationResult = '';
+      // Exact dictionary term shortcut
       if (dictMatch && dictMatch[targetLang]) {
-        translationResult = dictMatch[targetLang];
-      } else {
-        if (targetLang === 'en') {
-          translationResult = `[AI Translation] Converted to English:\n"${transInput}"\n\n(Eslatma: Butun darsliklar yoki yirik jildli hujjatlarni Gemini yordamida tarjima qilish uchun hisobingiz balansini to'ldiring.)`;
-        } else if (targetLang === 'ru') {
-          translationResult = `[ИИ Перевод] Переведено на русский язык:\n"${transInput}"\n\n(Примечание: Подключите API-ключ Gemini для перевода больших текстов.)`;
-        } else if (targetLang === 'uz') {
-          translationResult = `[AI Tarjima] O'zbek tiliga o'girildi:\n"${transInput}"`;
-        } else if (targetLang === 'kk') {
-          translationResult = `[AI Tarjima] Qazaq tiline o'girildi:\n"${transInput}"`;
-        } else {
-          translationResult = `[AI Çeviri] Türkçe çevirisi yapıldı:\n"${transInput}"`;
-        }
+        setTransOutput(dictMatch[targetLang]);
+        setIsTranslating(false);
+        return;
+      }
+      
+      const res = await fetch('/api/gemini/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: transInput.trim(),
+          sourceLang: currentLang,
+          targetLang: targetLang
+        })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || "Tarjima xizmati javob bermadi");
       }
 
-      setTransOutput(translationResult);
+      const data = await res.json();
+      setTransOutput(data.output || "");
+    } catch (err: any) {
+      console.error("Tarjima xatosi:", err);
+      setTransOutput("Tarjima vaqtincha ishlamayapti, iltimos birozdan keyin qayta urinib ko'ring.");
+    } finally {
       setIsTranslating(false);
-    }, 800);
+    }
   };
 
-  const handlePolish = () => {
+  const handlePolish = async () => {
     if (!polishInput.trim()) return;
     setIsPolishing(true);
+    setPolishOutput('');
 
-    setTimeout(() => {
-      let polished = polishInput;
+    try {
+      const res = await fetch('/api/gemini/polish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: polishInput.trim(),
+          style: polishStyle
+        })
+      });
 
-      polished = polished.replace(/(^\s*|[.!?]\s+)([a-zа-я])/g, (match, p1, p2) => p1 + p2.toUpperCase());
-      polished = polished.replace(/\s*([,.:!?])\s*/g, "$1 ");
-      polished = polished.replace(/hamda/gi, 'va hamda');
-      polished = polished.replace(/orqali/gi, 'yordamida');
-      polished = polished.replace(/harkat/gi, 'harakat');
-      polished = polished.replace(/malumot/gi, "ma'lumot");
-      polished = polished.replace(/katta/gi, 'yirik');
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || "Uslub tahrirlagich javob bermadi");
+      }
 
+      const data = await res.json();
+      
       let heading = '';
       if (polishStyle === 'official') {
         heading = "=== RASMIY-IDORAVIY USLUB ===\n";
-        polished = polished.replace(/man/gi, 'men').replace(/oldim/gi, 'qabul qildim').replace(/bering/gi, 'taqdim etishingizni so\'rayman');
       } else if (polishStyle === 'literary') {
         heading = "=== ADABIY-BADIY USLUB ===\n";
-        polished = polished.replace(/yaxshi/gi, 'g\'oyat go\'zal va olijanob');
       } else if (polishStyle === 'conversational') {
         heading = "=== DO'STONA SUHBAT SHAKLI ===\n";
       } else {
         heading = "=== SPELLCHECK (IMLO TUZATISH) ===\n";
       }
 
-      setPolishOutput(`${heading}${polished.trim()}\n\n* Imlo va punktuatsiya tahriri 100% muvaffaqiyatli bajarildi.`);
+      setPolishOutput(`${heading}${data.output || ""}`);
+    } catch (err: any) {
+      console.error("Uslub tahrirlash xatosi:", err);
+      setPolishOutput("Matnni sayqallash vaqtincha ishlamayapti, iltimos birozdan keyin qayta urinib ko'ring.");
+    } finally {
       setIsPolishing(false);
-    }, 700);
+    }
   };
 
   const copyToClipboard = async (text: string, type: 'trans' | 'polish') => {
@@ -205,7 +284,7 @@ export default function LanguageCenter({ currentLang, onFileProcessed, theme = '
                   Kontekstual Matn Tarjimasi
                 </h3>
                 <p className={`text-xs mt-0.5 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500 font-semibold'}`}>
-                  Universal ko'pto'plamli tarjimon paneli. (Sinov uchun "Salom", "Rahmat", "Shartnoma", "Ariza" kabi so'zlardan boshlang).
+                  Universal ko'p qatlamli tarjimon paneli. (Sinov uchun "Salom", "Rahmat", "Shartnoma", "Ariza" kabi so'zlardan boshlang).
                 </p>
               </div>
 
@@ -266,9 +345,32 @@ export default function LanguageCenter({ currentLang, onFileProcessed, theme = '
                 <div className={`flex items-center justify-between pt-4 border-t mt-2 ${
                   theme === 'dark' ? 'border-slate-800/50' : 'border-slate-200'
                 }`}>
-                  <span className="text-xs font-mono text-slate-500">
-                    {transInput.length} belgi
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-mono text-slate-500">
+                      {transInput.length} belgi
+                    </span>
+                    {transInput && (
+                      <button
+                        onClick={() => speakText(transInput, true)}
+                        className={`text-xs flex items-center gap-1.5 transition-colors cursor-pointer font-semibold ${
+                          isPlayingInput ? 'text-rose-500 hover:text-rose-400' : 'text-indigo-500 hover:text-indigo-400'
+                        }`}
+                        title={isPlayingInput ? "To'xtatish" : "Tinglash"}
+                      >
+                        {isPlayingInput ? (
+                          <>
+                            <VolumeX className="w-3.5 h-3.5 animate-pulse" />
+                            To'xtatish
+                          </>
+                        ) : (
+                          <>
+                            <Volume2 className="w-3.5 h-3.5" />
+                            Tinglash
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
                   <button
                     onClick={handleTranslate}
                     disabled={isTranslating}
@@ -291,18 +393,43 @@ export default function LanguageCenter({ currentLang, onFileProcessed, theme = '
                     Natija ({targetLang.toUpperCase()})
                   </span>
                   {transOutput && (
-                    <button
-                      onClick={() => copyToClipboard(transOutput, 'trans')}
-                      className={`p-1.5 px-3 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
-                        transCopied
-                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                          : theme === 'dark' 
-                            ? 'text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/10'
-                            : 'text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 shadow-sm'
-                      }`}
-                    >
-                      {transCopied ? t.copied : t.copy}
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => speakText(transOutput, false)}
+                        className={`p-1.5 px-3 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
+                          isPlayingOutput
+                            ? 'bg-gradient-to-r from-rose-500 to-rose-600 text-white shadow-lg shadow-rose-500/20'
+                            : theme === 'dark'
+                              ? 'text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/10'
+                              : 'text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 shadow-sm'
+                        }`}
+                        title={isPlayingOutput ? "To'xtatish" : "Tinglash"}
+                      >
+                        {isPlayingOutput ? (
+                          <>
+                            <VolumeX className="w-3.5 h-3.5 animate-pulse" />
+                            To'xtatish
+                          </>
+                        ) : (
+                          <>
+                            <Volume2 className="w-3.5 h-3.5" />
+                            Tinglash
+                          </>
+                        )}
+                      </button>
+                      <button
+                        onClick={() => copyToClipboard(transOutput, 'trans')}
+                        className={`p-1.5 px-3 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
+                          transCopied
+                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                            : theme === 'dark' 
+                              ? 'text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/10'
+                              : 'text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 shadow-sm'
+                        }`}
+                      >
+                        {transCopied ? t.copied : t.copy}
+                      </button>
+                    </div>
                   )}
                 </div>
                 <div className={`flex-1 overflow-y-auto text-base leading-relaxed whitespace-pre-wrap select-text ${

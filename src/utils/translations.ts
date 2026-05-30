@@ -134,7 +134,7 @@ export const UI_TRANSLATIONS: Record<Language, Record<string, string>> = {
 
     // Language Center Translates
     translateHeader: "Kontekstual Matn Tarjimasi",
-    translateDesc: "Universal ko'pto'plamli tarjimon paneli. (Sinov uchun \"Salom\", \"Rahmat\", \"Shartnoma\", \"Ariza\" kabi so'zlardan boshlang).",
+    translateDesc: "Universal ko'p qatlamli tarjimon paneli. (Sinov uchun \"Salom\", \"Rahmat\", \"Shartnoma\", \"Ariza\" kabi so'zlardan boshlang).",
     inputLabel: "Kiritiladigan matn",
     translateInputPlaceholder: "Tarjima qilinadigan matnni shu yerga yozing...",
     outputLabel: "Natija",
@@ -194,7 +194,7 @@ export const UI_TRANSLATIONS: Record<Language, Record<string, string>> = {
     bentoLangAction: "Hujjat yoki matnni o'girish",
 
     bentoDocSub: "Ishonchli va ishonchli asboblar guruhi",
-    bentoDocDesc: "PDF birlashtirish, bo'lish, qiyalatish, sahifa raqamlash va rasmlarni bitta tartibli PDF formatiga o'tkazish. Barcha amallar faqat brauzeringiz ichida ishonchli bajariladi.",
+    bentoDocDesc: "PDF birlashtirish, bo'lish, aylantirish, sahifa raqamlash va rasmlarni bitta tartibli PDF formatiga o'tkazish. Barcha amallar faqat brauzeringiz ichida ishonchli bajariladi.",
     bentoDocAction: "Fayllarni boshqarish",
 
     bentoAiSub: "Hujjat generatori & Chat",

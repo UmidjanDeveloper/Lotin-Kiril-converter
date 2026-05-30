@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { cyrillicToLatin, latinToCyrillic, detectLanguage } from '../utils/translit';
-import { Copy, Trash2, ArrowLeftRight, Check } from 'lucide-react';
+import { Copy, Trash2, ArrowLeftRight, Check, Volume2, VolumeX } from 'lucide-react';
 
 interface TextConverterProps {
   theme?: 'light' | 'dark';
@@ -18,6 +18,61 @@ export default function TextConverter({ theme = 'dark' }: TextConverterProps) {
   const [autoDetect, setAutoDetect] = useState(true);
   const [copied, setCopied] = useState(false);
   const [detectedLang, setDetectedLang] = useState<'cyrillic' | 'latin' | null>(null);
+
+  // Text-to-Speech States
+  const [isPlayingInput, setIsPlayingInput] = useState(false);
+  const [isPlayingOutput, setIsPlayingOutput] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
+
+  const speakText = (text: string, isInput: boolean) => {
+    if (!window.speechSynthesis) return;
+
+    if (window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel();
+      setIsPlayingInput(false);
+      setIsPlayingOutput(false);
+      if ((isInput && isPlayingInput) || (!isInput && isPlayingOutput)) {
+        return;
+      }
+    }
+
+    if (!text.trim()) return;
+
+    // Convert to Cyrillic
+    const isCyr = detectLanguage(text) === 'cyrillic';
+    const cyrText = isCyr ? text : latinToCyrillic(text);
+
+    const utterance = new SpeechSynthesisUtterance(cyrText);
+    utterance.lang = "ru-RU";
+    utterance.rate = 0.95;
+
+    utterance.onend = () => {
+      if (isInput) setIsPlayingInput(false);
+      else setIsPlayingOutput(false);
+    };
+
+    utterance.onerror = () => {
+      if (isInput) setIsPlayingInput(false);
+      else setIsPlayingOutput(false);
+    };
+
+    if (isInput) {
+      setIsPlayingInput(true);
+      setIsPlayingOutput(false);
+    } else {
+      setIsPlayingOutput(true);
+      setIsPlayingInput(false);
+    }
+
+    window.speechSynthesis.speak(utterance);
+  };
   
   // Real-time translation loop
   useEffect(() => {
@@ -169,17 +224,40 @@ export default function TextConverter({ theme = 'dark' }: TextConverterProps) {
             }`}>
               {direction === 'toLatin' ? 'KIRILL ALIFBOSIDA' : 'LOTIN ALIFBOSIDA'}
             </span>
-            {inputText && (
-              <button
-                id="clear-text-btn"
-                onClick={handleClear}
-                className="text-xs text-rose-500 hover:text-rose-400 flex items-center gap-1.5 transition-colors cursor-pointer font-semibold"
-                title="Matnni tozalash"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                Matnni tozalash
-              </button>
-            )}
+            <div className="flex items-center gap-3">
+              {inputText && (
+                <button
+                  onClick={() => speakText(inputText, true)}
+                  className={`text-xs flex items-center gap-1.5 transition-colors cursor-pointer font-semibold ${
+                    isPlayingInput ? 'text-rose-500 hover:text-rose-400' : 'text-indigo-500 hover:text-indigo-400'
+                  }`}
+                  title={isPlayingInput ? "To'xtatish" : "Tinglash"}
+                >
+                  {isPlayingInput ? (
+                    <>
+                      <VolumeX className="w-3.5 h-3.5 animate-pulse" />
+                      To'xtatish
+                    </>
+                  ) : (
+                    <>
+                      <Volume2 className="w-3.5 h-3.5" />
+                      Tinglash
+                    </>
+                  )}
+                </button>
+              )}
+              {inputText && (
+                <button
+                  id="clear-text-btn"
+                  onClick={handleClear}
+                  className="text-xs text-rose-500 hover:text-rose-400 flex items-center gap-1.5 transition-colors cursor-pointer font-semibold"
+                  title="Matnni tozalash"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Matnni tozalash
+                </button>
+              )}
+            </div>
           </div>
           <textarea
             id="input-text-area"
@@ -199,7 +277,7 @@ export default function TextConverter({ theme = 'dark' }: TextConverterProps) {
             theme === 'dark' ? 'border-slate-800/50' : 'border-slate-200'
           }`}>
             <span>Belgilar: <strong className="text-indigo-500">{charCount}</strong></span>
-            <span>So'zlar: <strong className="text-indigo-500">{wordCount}</strong></span>
+            <span>So'zlar: <strong className="text-indigo-505">{wordCount}</strong></span>
           </div>
         </div>
  
@@ -214,6 +292,29 @@ export default function TextConverter({ theme = 'dark' }: TextConverterProps) {
               {direction === 'toLatin' ? 'LOTIN ALIFBOSIDA (NATIJA)' : 'KIRILL ALIFBOSIDA (NATIJA)'}
             </span>
             <div className="flex items-center gap-2">
+              {outputText && (
+                <button
+                  onClick={() => speakText(outputText, false)}
+                  className={`p-1.5 px-3.5 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all cursor-pointer ${
+                    isPlayingOutput 
+                      ? 'bg-gradient-to-r from-rose-500 to-rose-600 text-white shadow-lg shadow-rose-500/20' 
+                      : 'text-indigo-600 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 dark:text-indigo-300'
+                  }`}
+                  title={isPlayingOutput ? "To'xtatish" : "Tinglash"}
+                >
+                  {isPlayingOutput ? (
+                    <>
+                      <VolumeX className="w-3.5 h-3.5 animate-pulse" />
+                      To'xtatish
+                    </>
+                  ) : (
+                    <>
+                      <Volume2 className="w-3.5 h-3.5" />
+                      Tinglash
+                    </>
+                  )}
+                </button>
+              )}
               {outputText && (
                 <button
                   id="copy-text-btn"
