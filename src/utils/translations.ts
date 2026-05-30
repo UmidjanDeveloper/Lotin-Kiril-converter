@@ -110,8 +110,8 @@ export const UI_TRANSLATIONS: Record<Language, Record<string, string>> = {
     wordKit: "Hujjat.uz Word Kit",
     editorTip: "Siz yuklab oladigan .docx hujjatni to'g'ridan-to'g'ri MS Word yoki Google Docs-da bemalol tahrirlashingiz mumkin.",
     sumSourceTitle: "Batafsil matn yoki hujjat mazmuni",
-    sumPlaceholder: "Summarize qilinadigan katta o'zbekcha matnni kiriting yoki hujjat so'zlarini yuklang...",
-    sumBtn: "Matnni summarize qilish",
+    sumPlaceholder: "Konspekt qilinadigan katta o'zbekcha matnni kiriting yoki hujjat so'zlarini yuklang...",
+    sumBtn: "Matnni konspekt qilish",
     sumBtnActive: "Konspektlanmoqda...",
     sumResultHeader: "AI Konspekt / Xulosa",
     sumResultPlaceholder: "Natija bu yerda hosil bo'ladi...",
@@ -147,8 +147,8 @@ export const UI_TRANSLATIONS: Record<Language, Record<string, string>> = {
     charLabel: "belgi",
 
     // 4. OCR Center specifics
-    ocrTitle: "Skandan Matn Olish (OCR)",
-    ocrDesc: "Sknerlangan hujjatlar yoki rasmlardagi matnlarni bir zumda aniqlaydi. Natijani to'g'ridan-to'g'ri o'girishingiz yoki tarjima qilishingiz mumkin.",
+    ocrTitle: "Skanerdan Matn Olish (OCR)",
+    ocrDesc: "Skanerlangan hujjatlar yoki rasmlardagi matnlarni bir zumda aniqlaydi. Natijani to'g'ridan-to'g'ri o'girishingiz yoki tarjima qilishingiz mumkin.",
     selectOcrImage: "Rasm yuklang (PNG, JPG)",
     ocrBtn: "Matnni aniqlash",
     ocrConvertDirect: "Lotinga o'girish",
@@ -193,7 +193,7 @@ export const UI_TRANSLATIONS: Record<Language, Record<string, string>> = {
     bentoLangDesc: "Uzbek Kirill matnlarini yoki butun jurnallarni lotinga, hamda lotindan kirillga imlo xatolarisiz o'giring. Standard matnlar, tezkor tarjimon va AI sayqallagich ulanmasidan foydalaning.",
     bentoLangAction: "Hujjat yoki matnni o'girish",
 
-    bentoDocSub: "Ishonchli va ishonchli asboblar guruhi",
+    bentoDocSub: "Ishonchli asboblar guruhi",
     bentoDocDesc: "PDF birlashtirish, bo'lish, aylantirish, sahifa raqamlash va rasmlarni bitta tartibli PDF formatiga o'tkazish. Barcha amallar faqat brauzeringiz ichida ishonchli bajariladi.",
     bentoDocAction: "Fayllarni boshqarish",
 

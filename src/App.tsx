@@ -114,11 +114,11 @@ export default function App() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-col sm:flex-row items-center justify-between gap-4">
           
           {/* Logo Brand with Premium badge */}
-          <div 
-            onClick={() => setActiveTab('home')}
-            className="flex items-center gap-3 cursor-pointer group w-full sm:w-auto justify-between sm:justify-start"
-          >
-            <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between w-full sm:w-auto gap-4">
+            <div 
+              onClick={() => setActiveTab('home')}
+              className="flex items-center gap-3 cursor-pointer group"
+            >
               <Logo size={44} />
               <div>
                 <h1 className={`text-xl font-black tracking-tight flex items-center gap-1.5 ${

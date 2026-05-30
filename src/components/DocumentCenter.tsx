@@ -33,9 +33,9 @@ export default function DocumentCenter({ currentLang, theme = 'dark' }: Document
   const [selectedTemplate, setSelectedTemplate] = useState<string>('ariza');
   
   // Unified document outputs and controls
-  const [docTo, setDocTo] = useState('"Mega Texnoloji" MCHJ direktori A.B. Toshmatovga');
-  const [docFrom, setDocFrom] = useState('"Dasturchi" lavozimidagi Karimov Akmal tomonidan');
-  const [docDetail, setDocDetail] = useState('oila sharoitim tufayli 5 kun muddatga oylik maosh saqlanmagan holda ish haqi saqlanmaydigan mehnat ta\'tili berishingizni so\'rayman');
+  const [docTo, setDocTo] = useState('');
+  const [docFrom, setDocFrom] = useState('');
+  const [docDetail, setDocDetail] = useState('');
   const [docPreviewMode, setDocPreviewMode] = useState<'computer' | 'handwriting'>('computer');
   const [handwritingStyle, setHandwritingStyle] = useState<'blue' | 'black'>('blue');
   const [generatedDocText, setGeneratedDocText] = useState<string>('');
@@ -94,24 +94,34 @@ export default function DocumentCenter({ currentLang, theme = 'dark' }: Document
   };
 
   const getLocalDraftText = (type: string, to: string, from: string, detail: string) => {
-    const cleanTo = to.trim();
-    const cleanFrom = from.trim();
-    const cleanDetail = detail.trim();
+    const defaults = getTemplateDefaults(type);
+
+    const getCleanValue = (val: string, fallback: string) => {
+      const trimmed = val.trim();
+      if (!trimmed) return fallback.replace(/\s+/g, ' ').trim();
+      return trimmed.replace(/\s+/g, ' ').trim();
+    };
+
+    const cleanTo = getCleanValue(to, defaults.to);
+    const cleanFrom = getCleanValue(from, defaults.from);
+    const cleanDetail = getCleanValue(detail, defaults.detail);
     const dateStr = new Date().toLocaleDateString('uz-UZ');
 
     switch (type) {
       case 'ariza':
+        let arizaBody = cleanDetail;
+        arizaBody = arizaBody.replace(/\.?\s*so'rayman\.?\s*$/i, '').trim();
         return `                                            ${cleanTo}
                                             ${cleanFrom}
 
                                    ARIZA
 
-      Sizdan, ${cleanDetail} so'rayman.
+       Sizdan, ${arizaBody} so'rayman.
 
-      Ariza mazmuni qonuniy va rasmiy munosabatlar qoidalariga rioya qilgan holda tuzildi.
+       Ariza mazmuni qonuniy va rasmiy munosabatlar qoidalariga rioya qilgan holda tuzildi.
 
-      Sana: ${dateStr}
-      Imzo: _____________________`;
+       Sana: ${dateStr}
+       Imzo: _____________________`;
       case 'tushuntirish':
         return `                                            ${cleanTo}
                                             ${cleanFrom}
@@ -192,12 +202,11 @@ export default function DocumentCenter({ currentLang, theme = 'dark' }: Document
 
   // Sync draft on load or template switch
   useEffect(() => {
-    const defaults = getTemplateDefaults(selectedTemplate);
-    setDocTo(defaults.to);
-    setDocFrom(defaults.from);
-    setDocDetail(defaults.detail);
+    setDocTo('');
+    setDocFrom('');
+    setDocDetail('');
     
-    const draftText = getLocalDraftText(selectedTemplate, defaults.to, defaults.from, defaults.detail);
+    const draftText = getLocalDraftText(selectedTemplate, '', '', '');
     setGeneratedDocText(draftText);
     setIsAiGenerated(false);
   }, [selectedTemplate]);
@@ -231,15 +240,19 @@ export default function DocumentCenter({ currentLang, theme = 'dark' }: Document
   const handleGenDoc = async () => {
     setIsGeneratingDocText(true);
     setErrorMessage('');
+    const defaults = getTemplateDefaults(selectedTemplate);
+    const apiTo = docTo.trim() || defaults.to;
+    const apiFrom = docFrom.trim() || defaults.from;
+    const apiDetail = docDetail.trim() || defaults.detail;
     try {
       const res = await fetch('/api/gemini/document', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           templateType: selectedTemplate,
-          to: docTo,
-          from: docFrom,
-          detail: docDetail
+          to: apiTo,
+          from: apiFrom,
+          detail: apiDetail
         })
       });
 
@@ -622,6 +635,7 @@ export default function DocumentCenter({ currentLang, theme = 'dark' }: Document
                     type="text"
                     value={docTo}
                     onChange={(e) => setDocTo(e.target.value)}
+                    placeholder={getTemplateDefaults(selectedTemplate).to}
                     className={`w-full text-xs px-3 py-2.5 border rounded-xl font-medium outline-none focus:border-indigo-500 transition duration-200 ${
                       theme === 'dark' ? 'bg-slate-909 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
                     }`}
@@ -636,6 +650,7 @@ export default function DocumentCenter({ currentLang, theme = 'dark' }: Document
                     type="text"
                     value={docFrom}
                     onChange={(e) => setDocFrom(e.target.value)}
+                    placeholder={getTemplateDefaults(selectedTemplate).from}
                     className={`w-full text-xs px-3 py-2.5 border rounded-xl font-medium outline-none focus:border-indigo-500 transition duration-200 ${
                       theme === 'dark' ? 'bg-slate-909 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
                     }`}
@@ -650,6 +665,7 @@ export default function DocumentCenter({ currentLang, theme = 'dark' }: Document
                     rows={4}
                     value={docDetail}
                     onChange={(e) => setDocDetail(e.target.value)}
+                    placeholder={getTemplateDefaults(selectedTemplate).detail}
                     className={`w-full text-xs px-3 py-2.5 border rounded-xl font-medium outline-none focus:border-indigo-500 resize-none transition duration-200 ${
                       theme === 'dark' ? 'bg-slate-909 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
                     }`}
