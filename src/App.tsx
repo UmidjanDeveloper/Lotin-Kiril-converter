@@ -64,7 +64,7 @@ export default function App() {
             </div>
             <div>
               <h1 className="text-2xl font-black font-display tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-indigo-100 to-purple-200 flex items-center gap-2">
-                Dimu konverteri
+                Online Konverter
               </h1>
               <p className="text-xs text-indigo-300 font-medium tracking-wide">
                 Hujjatlar (Word, Excel, PDF) va Matnlarni formatini buzmasdan o'giruvchi universal tizim
