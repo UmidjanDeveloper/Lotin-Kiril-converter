@@ -1,0 +1,6 @@
+{
+  "name": "Dimu konverteri",
+  "description": "Uzbek tili uchun Kirill va Lotin alifbolari o'rtasida matn va ofis xujjatlarini (DOCX, XLSX, PDF, TXT) o'giruvchi mukammal konverter.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
