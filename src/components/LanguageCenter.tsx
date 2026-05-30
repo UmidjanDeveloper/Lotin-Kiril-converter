@@ -265,8 +265,8 @@ export default function LanguageCenter({ currentLang, onFileProcessed, theme = '
 
       {/* Dynamic Content area */}
       <div className="transition-all duration-300">
-        {subTab === 'text' && <TextConverter theme={theme} />}
-        {subTab === 'files' && <FileConverter onFileProcessed={onFileProcessed} theme={theme} />}
+        {subTab === 'text' && <TextConverter currentLang={currentLang} theme={theme} />}
+        {subTab === 'files' && <FileConverter currentLang={currentLang} onFileProcessed={onFileProcessed} theme={theme} />}
         
         {/* Machine Translation Module */}
         {subTab === 'translate' && (
@@ -281,10 +281,10 @@ export default function LanguageCenter({ currentLang, onFileProcessed, theme = '
                   theme === 'dark' ? 'text-white' : 'text-slate-900'
                 }`}>
                   <Globe2 className="w-5 h-5 text-indigo-400 animate-pulse" />
-                  Kontekstual Matn Tarjimasi
+                  {t.translateHeader}
                 </h3>
                 <p className={`text-xs mt-0.5 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500 font-semibold'}`}>
-                  Universal ko'p qatlamli tarjimon paneli. (Sinov uchun "Salom", "Rahmat", "Shartnoma", "Ariza" kabi so'zlardan boshlang).
+                  {t.translateDesc}
                 </p>
               </div>
 
@@ -332,12 +332,12 @@ export default function LanguageCenter({ currentLang, onFileProcessed, theme = '
                 <span className={`text-[10px] font-mono font-bold uppercase tracking-widest mb-3 block ${
                   theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
                 }`}>
-                  Kiritiladigan matn ({sourceLang.toUpperCase()})
+                  {t.inputLabel} ({sourceLang.toUpperCase()})
                 </span>
                 <textarea
                   value={transInput}
                   onChange={(e) => setTransInput(e.target.value)}
-                  placeholder="Tarjima qilinadigan matnni shu yerga yozing..."
+                  placeholder={t.translateInputPlaceholder}
                   className={`flex-1 w-full bg-transparent resize-none border-none focus:outline-none focus:ring-0 text-base leading-relaxed ${
                     theme === 'dark' ? 'text-slate-100 placeholder-slate-700' : 'text-slate-900 placeholder-slate-400 font-medium'
                   }`}
@@ -347,7 +347,7 @@ export default function LanguageCenter({ currentLang, onFileProcessed, theme = '
                 }`}>
                   <div className="flex items-center gap-3">
                     <span className="text-xs font-mono text-slate-500">
-                      {transInput.length} belgi
+                      {transInput.length} {t.charLabel}
                     </span>
                     {transInput && (
                       <button
@@ -355,17 +355,17 @@ export default function LanguageCenter({ currentLang, onFileProcessed, theme = '
                         className={`text-xs flex items-center gap-1.5 transition-colors cursor-pointer font-semibold ${
                           isPlayingInput ? 'text-rose-500 hover:text-rose-400' : 'text-indigo-500 hover:text-indigo-400'
                         }`}
-                        title={isPlayingInput ? "To'xtatish" : "Tinglash"}
+                        title={isPlayingInput ? (t.stopTts || "To'xtatish") : (t.listenTts || "Tinglash")}
                       >
                         {isPlayingInput ? (
                           <>
                             <VolumeX className="w-3.5 h-3.5 animate-pulse" />
-                            To'xtatish
+                            {t.stopTts || "To'xtatish"}
                           </>
                         ) : (
                           <>
                             <Volume2 className="w-3.5 h-3.5" />
-                            Tinglash
+                            {t.listenTts || "Tinglash"}
                           </>
                         )}
                       </button>
@@ -390,7 +390,7 @@ export default function LanguageCenter({ currentLang, onFileProcessed, theme = '
                   <span className={`text-[10px] font-mono font-bold uppercase tracking-widest block ${
                     theme === 'dark' ? 'text-purple-350' : 'text-purple-700'
                   }`}>
-                    Natija ({targetLang.toUpperCase()})
+                    {t.outputLabel} ({targetLang.toUpperCase()})
                   </span>
                   {transOutput && (
                     <div className="flex items-center gap-2">
@@ -403,17 +403,17 @@ export default function LanguageCenter({ currentLang, onFileProcessed, theme = '
                               ? 'text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/10'
                               : 'text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 shadow-sm'
                         }`}
-                        title={isPlayingOutput ? "To'xtatish" : "Tinglash"}
+                        title={isPlayingOutput ? (t.stopTts || "To'xtatish") : (t.listenTts || "Tinglash")}
                       >
                         {isPlayingOutput ? (
                           <>
                             <VolumeX className="w-3.5 h-3.5 animate-pulse" />
-                            To'xtatish
+                            {t.stopTts || "To'xtatish"}
                           </>
                         ) : (
                           <>
                             <Volume2 className="w-3.5 h-3.5" />
-                            Tinglash
+                            {t.listenTts || "Tinglash"}
                           </>
                         )}
                       </button>
@@ -457,10 +457,10 @@ export default function LanguageCenter({ currentLang, onFileProcessed, theme = '
                   theme === 'dark' ? 'text-white' : 'text-slate-900'
                 }`}>
                   <Sparkles className="w-5 h-5 text-purple-400 animate-pulse" />
-                  AI Sayqallash hujjati va Tahrirlagich
+                  {t.polishHeader}
                 </h3>
                 <p className={`text-xs mt-0.5 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500 font-semibold'}`}>
-                  Imlo xatolarini o'chirish, adabiy ohang berish va gap tuzilishini yaxshilovchi milliy korpus uslubiy tizimi.
+                  {t.polishDesc}
                 </p>
               </div>
 
@@ -476,7 +476,7 @@ export default function LanguageCenter({ currentLang, onFileProcessed, theme = '
                       : 'text-slate-500 hover:text-slate-850 dark:text-slate-400 dark:hover:text-slate-200'
                   }`}
                 >
-                  Rasmiy-idoraviy
+                  {t.styleOfficial}
                 </button>
                 <button
                   onClick={() => setPolishStyle('literary')}
@@ -486,17 +486,17 @@ export default function LanguageCenter({ currentLang, onFileProcessed, theme = '
                       : 'text-slate-500 hover:text-slate-850 dark:text-slate-400 dark:hover:text-slate-200'
                   }`}
                 >
-                  Adabiy
+                  {t.styleLiterary || 'Adabiy'}
                 </button>
                 <button
                   onClick={() => setPolishStyle('spellcheck')}
                   className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer ${
                     polishStyle === 'spellcheck' 
                       ? 'bg-indigo-600 text-white shadow-sm' 
-                      : 'text-slate-500 hover:text-slate-850 dark:text-slate-400 dark:hover:text-slate-200'
+                      : 'text-slate-550 hover:text-slate-850 dark:text-slate-400 dark:hover:text-slate-200'
                   }`}
                 >
-                  Faqat imlo
+                  {t.styleSpellcheck}
                 </button>
               </div>
             </div>
@@ -511,12 +511,12 @@ export default function LanguageCenter({ currentLang, onFileProcessed, theme = '
                 <span className={`text-[10px] font-mono font-bold uppercase tracking-widest mb-3 block ${
                   theme === 'dark' ? 'text-purple-400' : 'text-purple-650'
                 }`}>
-                  Kiritiladigan tekst
+                  {t.inputLabel}
                 </span>
                 <textarea
                   value={polishInput}
                   onChange={(e) => setPolishInput(e.target.value)}
-                  placeholder="Uslubiy tahrirlanadigan, imlo xatolarini tuzatish kerak bo'lgan o'zbekcha matnni shu yerga joylang..."
+                  placeholder={t.polishInputPlaceholder}
                   className={`flex-1 w-full bg-transparent resize-none border-none focus:outline-none focus:ring-0 text-base leading-relaxed ${
                     theme === 'dark' ? 'text-slate-100 placeholder-slate-700' : 'text-slate-900 placeholder-slate-400 font-medium'
                   }`}
@@ -525,7 +525,7 @@ export default function LanguageCenter({ currentLang, onFileProcessed, theme = '
                   theme === 'dark' ? 'border-slate-800/50' : 'border-slate-200'
                 }`}>
                   <span className="text-xs font-mono text-slate-500">
-                    {polishInput.length} belgi
+                    {polishInput.length} {t.charLabel}
                   </span>
                   <button
                     onClick={handlePolish}
@@ -546,7 +546,7 @@ export default function LanguageCenter({ currentLang, onFileProcessed, theme = '
                   <span className={`text-[10px] font-mono font-bold uppercase tracking-widest block ${
                     theme === 'dark' ? 'text-indigo-400' : 'text-indigo-700'
                   }`}>
-                    Sayqallash natijasi
+                    {t.outputLabel}
                   </span>
                   {polishOutput && (
                     <button
@@ -566,9 +566,9 @@ export default function LanguageCenter({ currentLang, onFileProcessed, theme = '
                 <div className={`flex-1 overflow-y-auto text-base leading-relaxed whitespace-pre-wrap select-text ${
                   polishOutput 
                     ? theme === 'dark' ? 'text-slate-100' : 'text-slate-900 font-medium' 
-                    : 'text-slate-500 italic select-none'
+                    : 'text-slate-505 italic select-none'
                 }`}>
-                  {polishOutput || "Sayqallangan, tahrir qilingan natija bu yerda hosil bo'ladi..."}
+                  {polishOutput || t.outputPlaceholder}
                 </div>
               </div>
             </div>

@@ -3,21 +3,23 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { cyrillicToLatin, latinToCyrillic, detectLanguage } from '../utils/translit';
 import { Copy, Trash2, ArrowLeftRight, Check, Volume2, VolumeX } from 'lucide-react';
+import { UI_TRANSLATIONS, Language } from '../utils/translations';
 
 interface TextConverterProps {
+  currentLang?: Language;
   theme?: 'light' | 'dark';
 }
 
-export default function TextConverter({ theme = 'dark' }: TextConverterProps) {
+export default function TextConverter({ currentLang = 'uz', theme = 'dark' }: TextConverterProps) {
+  const t = UI_TRANSLATIONS[currentLang] || UI_TRANSLATIONS.uz;
+
   const [inputText, setInputText] = useState('');
-  const [outputText, setOutputText] = useState('');
   const [direction, setDirection] = useState<'toLatin' | 'toCyrillic'>('toLatin');
   const [autoDetect, setAutoDetect] = useState(true);
   const [copied, setCopied] = useState(false);
-  const [detectedLang, setDetectedLang] = useState<'cyrillic' | 'latin' | null>(null);
 
   // Text-to-Speech States
   const [isPlayingInput, setIsPlayingInput] = useState(false);
@@ -30,6 +32,28 @@ export default function TextConverter({ theme = 'dark' }: TextConverterProps) {
       }
     };
   }, []);
+
+  // Derive detected language on the fly without state updates
+  const detectedLang = useMemo(() => {
+    if (!inputText.trim()) return null;
+    return detectLanguage(inputText);
+  }, [inputText]);
+
+  // Derive the active translation direction
+  const activeDirection = useMemo(() => {
+    if (autoDetect && detectedLang) {
+      return detectedLang === 'cyrillic' ? 'toLatin' : 'toCyrillic';
+    }
+    return direction;
+  }, [autoDetect, detectedLang, direction]);
+
+  // Derive the transliterated output text
+  const outputText = useMemo(() => {
+    if (!inputText.trim()) return '';
+    return activeDirection === 'toLatin'
+      ? cyrillicToLatin(inputText)
+      : latinToCyrillic(inputText);
+  }, [inputText, activeDirection]);
 
   const speakText = (text: string, isInput: boolean) => {
     if (!window.speechSynthesis) return;
@@ -73,41 +97,13 @@ export default function TextConverter({ theme = 'dark' }: TextConverterProps) {
 
     window.speechSynthesis.speak(utterance);
   };
-  
-  // Real-time translation loop
-  useEffect(() => {
-    if (!inputText.trim()) {
-      setOutputText('');
-      setDetectedLang(null);
-      return;
-    }
-
-    let activeDirection = direction;
-
-    if (autoDetect) {
-      const detected = detectLanguage(inputText);
-      setDetectedLang(detected);
-      if (detected === 'cyrillic' && direction !== 'toLatin') {
-         activeDirection = 'toLatin';
-         setDirection('toLatin');
-      } else if (detected === 'latin' && direction !== 'toCyrillic') {
-         activeDirection = 'toCyrillic';
-         setDirection('toCyrillic');
-      }
-    }
-
-    if (activeDirection === 'toLatin') {
-      setOutputText(cyrillicToLatin(inputText));
-    } else {
-      setOutputText(latinToCyrillic(inputText));
-    }
-  }, [inputText, direction, autoDetect]);
 
   const handleSwapDirection = () => {
     setAutoDetect(false); 
-    setDirection(prev => prev === 'toLatin' ? 'toCyrillic' : 'toLatin');
-    setInputText(outputText);
-    setOutputText(inputText);
+    const nextDir = activeDirection === 'toLatin' ? 'toCyrillic' : 'toLatin';
+    setDirection(nextDir);
+    const oldOutput = outputText;
+    setInputText(oldOutput);
   };
 
   const handleCopy = async () => {
@@ -123,7 +119,6 @@ export default function TextConverter({ theme = 'dark' }: TextConverterProps) {
 
   const handleClear = () => {
     setInputText('');
-    setOutputText('');
   };
 
   const wordCount = inputText.trim() ? inputText.trim().split(/\s+/).length : 0;
@@ -149,25 +144,25 @@ export default function TextConverter({ theme = 'dark' }: TextConverterProps) {
               setDirection('toLatin');
             }}
             className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 cursor-pointer ${
-              !autoDetect && direction === 'toLatin'
+              !autoDetect && activeDirection === 'toLatin'
                 ? 'bg-gradient-to-r from-indigo-500 to-indigo-600 text-white shadow-md shadow-indigo-500/20'
                 : theme === 'dark' ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            Kirill → Lotin
+            {t.directionCyrToLat}
           </button>
           
           <button
             id="swap-dir-btn"
             onClick={handleSwapDirection}
-            title="Yo'nalishni almashtirish"
+            title={t.swapDirTooltip || "Yo'nalishni almashtirish"}
             className={`p-2 rounded-lg transition-colors cursor-pointer ${
               theme === 'dark' ? 'text-indigo-400 hover:text-indigo-300 hover:bg-slate-800' : 'text-indigo-600 hover:text-indigo-800 hover:bg-slate-200'
             }`}
           >
             <ArrowLeftRight className="w-4 h-4" />
           </button>
- 
+          
           <button
             id="toggle-direction-to-cyr-btn"
             onClick={() => {
@@ -175,21 +170,21 @@ export default function TextConverter({ theme = 'dark' }: TextConverterProps) {
               setDirection('toCyrillic');
             }}
             className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 cursor-pointer ${
-              !autoDetect && direction === 'toCyrillic'
+              !autoDetect && activeDirection === 'toCyrillic'
                 ? 'bg-gradient-to-r from-indigo-500 to-indigo-600 text-white shadow-md shadow-indigo-500/20'
                 : theme === 'dark' ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            Lotin → Kirill
+            {t.directionLatToCyr}
           </button>
         </div>
- 
+        
         {/* Auto Detect Toggle */}
         <div className="flex items-center gap-3">
           <label className={`text-xs font-bold uppercase tracking-widest select-none font-mono ${
             theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
           }`}>
-            AVTO-ANIQLASH:
+            {t.autoDetect.toUpperCase()}:
           </label>
           <button
             id="auto-detect-toggle"
@@ -206,12 +201,12 @@ export default function TextConverter({ theme = 'dark' }: TextConverterProps) {
           </button>
           {autoDetect && detectedLang && (
             <span className="text-[10px] font-mono font-black uppercase px-2.5 py-1 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 animate-pulse">
-              {detectedLang === 'cyrillic' ? 'Matn: Kirill' : 'Matn: Lotin'}
+              {detectedLang === 'cyrillic' ? (t.langCyrillicBadge || 'Matn: Kirill') : (t.langLatinBadge || 'Matn: Lotin')}
             </span>
           )}
         </div>
       </div>
-  
+      
       {/* Textareas Grid */}
       <div className={`grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x ${
         theme === 'dark' ? 'divide-slate-800' : 'divide-slate-200'
@@ -222,7 +217,7 @@ export default function TextConverter({ theme = 'dark' }: TextConverterProps) {
             <span className={`text-xs font-bold uppercase tracking-widest font-mono ${
               theme === 'dark' ? 'text-indigo-300/80' : 'text-indigo-600'
             }`}>
-              {direction === 'toLatin' ? 'KIRILL ALIFBOSIDA' : 'LOTIN ALIFBOSIDA'}
+              {activeDirection === 'toLatin' ? (t.latinInputHeader || 'KIRILL ALIFBOSIDA') : (t.cyrillicInputHeader || 'LOTIN ALIFBOSIDA')}
             </span>
             <div className="flex items-center gap-3">
               {inputText && (
@@ -231,17 +226,17 @@ export default function TextConverter({ theme = 'dark' }: TextConverterProps) {
                   className={`text-xs flex items-center gap-1.5 transition-colors cursor-pointer font-semibold ${
                     isPlayingInput ? 'text-rose-500 hover:text-rose-400' : 'text-indigo-500 hover:text-indigo-400'
                   }`}
-                  title={isPlayingInput ? "To'xtatish" : "Tinglash"}
+                  title={isPlayingInput ? (t.stopTts || "To'xtatish") : (t.listenTts || "Tinglash")}
                 >
                   {isPlayingInput ? (
                     <>
                       <VolumeX className="w-3.5 h-3.5 animate-pulse" />
-                      To'xtatish
+                      {t.stopTts || "To'xtatish"}
                     </>
                   ) : (
                     <>
                       <Volume2 className="w-3.5 h-3.5" />
-                      Tinglash
+                      {t.listenTts || "Tinglash"}
                     </>
                   )}
                 </button>
@@ -251,10 +246,10 @@ export default function TextConverter({ theme = 'dark' }: TextConverterProps) {
                   id="clear-text-btn"
                   onClick={handleClear}
                   className="text-xs text-rose-500 hover:text-rose-400 flex items-center gap-1.5 transition-colors cursor-pointer font-semibold"
-                  title="Matnni tozalash"
+                  title={t.clear || "Matnni tozalash"}
                 >
                   <Trash2 className="w-3.5 h-3.5" />
-                  Matnni tozalash
+                  {t.clear || "Matnni tozalash"}
                 </button>
               )}
             </div>
@@ -264,9 +259,9 @@ export default function TextConverter({ theme = 'dark' }: TextConverterProps) {
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             placeholder={
-              direction === 'toLatin'
-                ? "Bu yerga kirillcha matnni kiriting yoki joylang (Ctrl+V)..."
-                : "Bu yerga lotincha matnni kiriting yoki joylang (Ctrl+V)..."
+              activeDirection === 'toLatin'
+                ? t.inputPlaceholderCyr
+                : t.inputPlaceholderLat
             }
             className={`flex-1 w-full bg-transparent resize-none border-none focus:outline-none text-base leading-relaxed min-h-[250px] focus:ring-0 ${
               theme === 'dark' ? 'text-slate-200 placeholder-slate-700' : 'text-slate-800 font-medium placeholder-slate-400'
@@ -276,11 +271,11 @@ export default function TextConverter({ theme = 'dark' }: TextConverterProps) {
           <div className={`flex items-center gap-4 pt-4 border-t text-xs font-mono text-slate-500 mt-2 ${
             theme === 'dark' ? 'border-slate-800/50' : 'border-slate-200'
           }`}>
-            <span>Belgilar: <strong className="text-indigo-500">{charCount}</strong></span>
-            <span>So'zlar: <strong className="text-indigo-505">{wordCount}</strong></span>
+            <span>{t.charCount || 'Belgilar'}: <strong className="text-indigo-500">{charCount}</strong></span>
+            <span>{t.wordCount || 'So\'zlar'}: <strong className="text-indigo-505">{wordCount}</strong></span>
           </div>
         </div>
- 
+        
         {/* Output Pane */}
         <div className={`flex flex-col p-6 min-h-[350px] ${
           theme === 'dark' ? 'bg-slate-950/20' : 'bg-slate-50/50'
@@ -289,7 +284,7 @@ export default function TextConverter({ theme = 'dark' }: TextConverterProps) {
             <span className={`text-xs font-bold uppercase tracking-widest font-mono ${
               theme === 'dark' ? 'text-purple-300/80' : 'text-purple-600'
             }`}>
-              {direction === 'toLatin' ? 'LOTIN ALIFBOSIDA (NATIJA)' : 'KIRILL ALIFBOSIDA (NATIJA)'}
+              {activeDirection === 'toLatin' ? (t.latinOutputHeader || 'LOTIN ALIFBOSIDA (NATIJA)') : (t.cyrillicOutputHeader || 'KIRILL ALIFBOSIDA (NATIJA)')}
             </span>
             <div className="flex items-center gap-2">
               {outputText && (
@@ -300,17 +295,17 @@ export default function TextConverter({ theme = 'dark' }: TextConverterProps) {
                       ? 'bg-gradient-to-r from-rose-500 to-rose-600 text-white shadow-lg shadow-rose-500/20' 
                       : 'text-indigo-600 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 dark:text-indigo-300'
                   }`}
-                  title={isPlayingOutput ? "To'xtatish" : "Tinglash"}
+                  title={isPlayingOutput ? (t.stopTts || "To'xtatish") : (t.listenTts || "Tinglash")}
                 >
                   {isPlayingOutput ? (
                     <>
                       <VolumeX className="w-3.5 h-3.5 animate-pulse" />
-                      To'xtatish
+                      {t.stopTts || "To'xtatish"}
                     </>
                   ) : (
                     <>
                       <Volume2 className="w-3.5 h-3.5" />
-                      Tinglash
+                      {t.listenTts || "Tinglash"}
                     </>
                   )}
                 </button>
@@ -328,12 +323,12 @@ export default function TextConverter({ theme = 'dark' }: TextConverterProps) {
                   {copied ? (
                     <>
                       <Check className="w-3.5 h-3.5 animate-bounce" />
-                      Nusxalandi!
+                      {t.copied}
                     </>
                   ) : (
                     <>
                       <Copy className="w-3.5 h-3.5" />
-                      Nusxa olish
+                      {t.copy}
                     </>
                   )}
                 </button>
@@ -349,7 +344,7 @@ export default function TextConverter({ theme = 'dark' }: TextConverterProps) {
                 : 'text-slate-500 italic select-none'
             }`}
           >
-            {outputText || "O'girilgan tarjima bu yerda real vaqtda hosil bo'ladi..."}
+            {outputText || t.outputPlaceholder}
           </div>
         </div>
       </div>
@@ -358,7 +353,7 @@ export default function TextConverter({ theme = 'dark' }: TextConverterProps) {
       <div className={`border-t px-6 py-4 flex flex-wrap gap-x-6 gap-y-2 text-xs font-mono ${
         theme === 'dark' ? 'bg-slate-950/40 border-slate-800 text-slate-400' : 'bg-slate-100/60 border-slate-200 text-slate-550'
       }`}>
-        <span className={`font-bold uppercase tracking-wider ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Qoidalar:</span>
+        <span className={`font-bold uppercase tracking-wider ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{t.rulesLabel || 'Qoidalar'}:</span>
         <span>Ў/ў ⇄ O'/o'</span>
         <span>Ғ/ғ ⇄ G'/g'</span>
         <span>Ш/ш ⇄ Sh/sh</span>

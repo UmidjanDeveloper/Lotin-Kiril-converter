@@ -6,14 +6,17 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FileItem, TranslitDirection } from '../types';
 import { processDocumentFile } from '../utils/fileProcessor';
-import { UploadCloud, FileText, CheckCircle2, AlertCircle, Trash2, Download, ArrowLeftRight, HelpCircle } from 'lucide-react';
+import { UploadCloud, FileText, CheckCircle2, AlertCircle, Trash2, Download, ArrowLeftRight } from 'lucide-react';
+import { UI_TRANSLATIONS, Language } from '../utils/translations';
 
 interface FileConverterProps {
+  currentLang?: Language;
   onFileProcessed: (charCount: number) => void;
   theme?: 'light' | 'dark';
 }
 
-export default function FileConverter({ onFileProcessed, theme = 'dark' }: FileConverterProps) {
+export default function FileConverter({ currentLang = 'uz', onFileProcessed, theme = 'dark' }: FileConverterProps) {
+  const t = UI_TRANSLATIONS[currentLang] || UI_TRANSLATIONS.uz;
   const [globalDirection, setGlobalDirection] = useState<TranslitDirection>('toLatin');
   const [fileItems, setFileItems] = useState<FileItem[]>([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -114,7 +117,7 @@ export default function FileConverter({ onFileProcessed, theme = 'dark' }: FileC
           progress: 100,
           downloadUrl,
           outputFileName: result.fileName,
-          errorMessage: `${durationMs} ms ichida o'girildi`
+          errorMessage: `${durationMs} ${t.convertedIn || "ms ichida o'girildi"}`
         } : f)
       );
     } catch (error: any) {
@@ -123,7 +126,7 @@ export default function FileConverter({ onFileProcessed, theme = 'dark' }: FileC
           ...f,
           status: 'error',
           progress: 100,
-          errorMessage: error.message || 'Xatolik yuz berdi'
+          errorMessage: error.message || t.error || 'Xatolik yuz berdi'
         } : f)
       );
     }
@@ -167,10 +170,10 @@ export default function FileConverter({ onFileProcessed, theme = 'dark' }: FileC
             theme === 'dark' ? 'text-white' : 'text-slate-900'
           }`}>
             <ArrowLeftRight className="w-5 h-5 text-indigo-500 animate-pulse" />
-            Tarjima Yo'nalishini Sozlash
+            {t.configTitle}
           </h2>
           <p className={`text-xs sm:text-sm mt-1 font-sans ${theme === 'dark' ? 'text-indigo-250/60' : 'text-slate-500'}`}>
-            Hujjatlarni o'girishdan oldin lozim bo'lgan alifbo yo'nalishini belgilang.
+            {t.configDesc}
           </p>
         </div>
         
@@ -186,7 +189,7 @@ export default function FileConverter({ onFileProcessed, theme = 'dark' }: FileC
                 : theme === 'dark' ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            Kirill → Lotin
+            {t.directionCyrToLat}
           </button>
           
           <div className="px-1.5 text-indigo-500/50">
@@ -202,7 +205,7 @@ export default function FileConverter({ onFileProcessed, theme = 'dark' }: FileC
                 : theme === 'dark' ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            Lotin → Kirill
+            {t.directionLatToCyr}
           </button>
         </div>
       </div>
@@ -242,18 +245,18 @@ export default function FileConverter({ onFileProcessed, theme = 'dark' }: FileC
         </div>
         
         <h3 className={`text-lg font-bold mt-5 font-display tracking-wide ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
-          Fayllarni bu yerga sudrab tashlang yoki bosing
+          {t.uploadArea}
         </h3>
         
         <p className={`text-xs mt-2.5 max-w-md font-sans leading-relaxed ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
-          Word (<strong className="text-indigo-500 font-mono">.docx</strong>), Excel (<strong className="text-emerald-500 font-mono">.xlsx</strong>), PDF (<strong className="text-purple-500 font-mono">.pdf</strong>) yoki Matn (<strong className="text-indigo-550 font-mono">.txt</strong>) fayllari qo'llab-quvvatlanadi.
+          {t.supportedFormats}
         </p>
         
         <div className={`mt-5 flex items-center gap-2 text-[11px] font-mono px-4 py-2.5 rounded-xl border shadow ${
           theme === 'dark' ? 'bg-indigo-500/10 text-indigo-300 border-indigo-500/20' : 'bg-indigo-50 text-indigo-750 border-indigo-100'
         }`}>
           <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-          <span className="font-semibold">Fayllar faqat brauzeringizda qayta ishlanadi. Hech qanday serverga yuklanmaydi.</span>
+          <span className="font-semibold">{t.privacyBanner}</span>
         </div>
       </div>
 
@@ -266,7 +269,7 @@ export default function FileConverter({ onFileProcessed, theme = 'dark' }: FileC
             theme === 'dark' ? 'border-slate-850 bg-slate-950/60' : 'border-slate-150 bg-slate-100/40'
           }`}>
             <h3 className={`text-xs sm:text-sm font-bold font-display tracking-wider uppercase ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
-              Yuklangan Fayllar ({fileItems.length})
+              {t.uploadedFilesHeader || 'Yuklangan Fayllar'} ({fileItems.length})
             </h3>
             <button
               id="clear-all-files-btn"
@@ -278,7 +281,7 @@ export default function FileConverter({ onFileProcessed, theme = 'dark' }: FileC
               }}
               className="text-xs text-rose-500 hover:text-rose-450 flex items-center gap-1.5 font-bold transition duration-200 cursor-pointer uppercase tracking-wider"
             >
-              Tozalash
+              {t.clear}
             </button>
           </div>
           
@@ -350,7 +353,7 @@ export default function FileConverter({ onFileProcessed, theme = 'dark' }: FileC
                         <div className="text-right font-sans">
                           <span className="text-xs font-bold text-emerald-600 flex items-center gap-1.5 justify-end mb-0.5 dark:text-emerald-400">
                             <CheckCircle2 className="w-4 h-4" />
-                            Tayyor
+                            {t.statusReady || 'Tayyor'}
                           </span>
                           <span className="text-[10px] text-slate-500 font-mono block">
                             {item.errorMessage}
@@ -360,10 +363,10 @@ export default function FileConverter({ onFileProcessed, theme = 'dark' }: FileC
                           id={`download-btn-${item.id}`}
                           onClick={() => handleDownload(item)}
                           className="px-4 py-2.5 bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-lg active:scale-95 duration-200 cursor-pointer"
-                          title="Faylni yuklab olish"
+                          title={t.downloadFileTooltip || "Faylni yuklab olish"}
                         >
                           <Download className="w-4 h-4" />
-                          Yuklab olish
+                          {t.download}
                         </button>
                       </div>
                     )}
@@ -379,7 +382,7 @@ export default function FileConverter({ onFileProcessed, theme = 'dark' }: FileC
 
                     {item.status === 'idle' && (
                       <span className="text-xs text-slate-550 italic font-mono font-semibold">
-                        Kutilmoqda...
+                        {t.statusWaiting || 'Kutilmoqda...'}
                       </span>
                     )}
 
@@ -389,7 +392,7 @@ export default function FileConverter({ onFileProcessed, theme = 'dark' }: FileC
                       className={`p-2 rounded-xl transition-all cursor-pointer ${
                         theme === 'dark' ? 'text-slate-500 hover:text-rose-400 hover:bg-rose-500/5' : 'text-slate-400 hover:text-rose-600 hover:bg-rose-50'
                       }`}
-                      title="O'chirish"
+                      title={t.buttonDelete || "O'chirish"}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>

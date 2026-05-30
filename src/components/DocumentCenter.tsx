@@ -3,10 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { jsPDF } from 'jspdf';
+import { createSimpleDocx } from '../utils/fileProcessor';
 import { UI_TRANSLATIONS, Language } from '../utils/translations';
-import { FileText, Plus, ChevronRight, Lock, EyeOff, RotateCw, Image, Landmark, Milestone, Shield, Layers, Compass, Download, CheckCircle2, AlertCircle, RefreshCw, X } from 'lucide-react';
+import { FileText, Plus, ChevronRight, Lock, EyeOff, RotateCw, Image, Landmark, Milestone, Shield, Layers, Compass, Download, CheckCircle2, AlertCircle, RefreshCw, X, Sparkles, Check } from 'lucide-react';
 
 interface DocumentCenterProps {
   currentLang: Language;
@@ -25,7 +26,347 @@ interface PdfTool {
 
 export default function DocumentCenter({ currentLang, theme = 'dark' }: DocumentCenterProps) {
   const t = UI_TRANSLATIONS[currentLang];
+  const [subTab, setSubTab] = useState<'templates' | 'pdf'>('templates');
   const [activeTool, setActiveTool] = useState<string | null>(null);
+
+  // Document templates state
+  const [selectedTemplate, setSelectedTemplate] = useState<string>('ariza');
+  
+  // Unified document outputs and controls
+  const [docTo, setDocTo] = useState('"Mega Texnoloji" MCHJ direktori A.B. Toshmatovga');
+  const [docFrom, setDocFrom] = useState('"Dasturchi" lavozimidagi Karimov Akmal tomonidan');
+  const [docDetail, setDocDetail] = useState('oila sharoitim tufayli 5 kun muddatga oylik maosh saqlanmagan holda ish haqi saqlanmaydigan mehnat ta\'tili berishingizni so\'rayman');
+  const [docPreviewMode, setDocPreviewMode] = useState<'computer' | 'handwriting'>('computer');
+  const [handwritingStyle, setHandwritingStyle] = useState<'blue' | 'black'>('blue');
+  const [generatedDocText, setGeneratedDocText] = useState<string>('');
+  const [isGeneratingDocText, setIsGeneratingDocText] = useState(false);
+  const [isAiGenerated, setIsAiGenerated] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [generatingDoc, setGeneratingDoc] = useState(false);
+
+  // Helper defaults & fallbacks defined inline or outside component
+  const getTemplateDefaults = (type: string) => {
+    switch (type) {
+      case 'ariza':
+        return {
+          to: '"Mega Texnoloji" MCHJ direktori A.B. Toshmatovga',
+          from: '"Dasturchi" lavozimidagi Karimov Akmal tomonidan',
+          detail: 'oila sharoitim tufayli 5 kun muddatga oylik maosh saqlanmagan holda ish haqi saqlanmaydigan mehnat ta\'tili berishingizni so\'rayman'
+        };
+      case 'tushuntirish':
+        return {
+          to: '"Yuksak Parvoz" DUK rahbari S.S. Alimovga',
+          from: '"Yetakchi mutaxassis" Rahimov Akmal',
+          detail: '2026-yil 29-may kuni ertalabki soat 09:00 dagi majlisga 30 daqiqa kechikib keldim. Sababi uyim oldidagi yo\'lda avtotransport hodisasi tufayli katta tirbandlik yuzaga keldi.'
+        };
+      case 'tavsifnoma':
+        return {
+          to: 'Tegishli joyga taqdim etish uchun',
+          from: '"Texno-Inovatika" MCHJ rahbariyati',
+          detail: 'Xodim Salimov Umid o\'z faoliyati davomida o\'zini intizomli, bilimli va jamoada hurmatga sazovor mutaxassis sifatida ko\'rsatdi. Hech qanday intizomiy jazo choralariga tortilmagan.'
+        };
+      case 'shartnoma':
+        return {
+          to: 'Sotuvchi: Rahimov Sobir (Pasport AB 1234567, Toshkent sh.)',
+          from: 'Sotib oluvchi: Karimov Akmal (Pasport AC 7654321, Toshkent sh.)',
+          detail: 'Chevrolet Lacetti avtotransport vositasi (Davlat raqami 01 A 777 AA) jami 120,000,000 (bir yuz yirma million) so\'m evaziga sotilmoqda. To\'lov 3 ish kuni ichida amalga oshiriladi.'
+        };
+      case 'bildirgi':
+        return {
+          to: 'Kadrlar bo\'limi boshlig\'i M.V. Shohalilovaga',
+          from: 'Guruh rahbari Soliyev Bobur',
+          detail: 'Axborot xavfsizligi bo\'limi xodimi Ergashev G\'ayrat o\'z lavozim majburiyatlarini bir necha bor buzganligi va ish vaqtida asossiz yo\'q bo\'lganligi haqida bildirish xati.'
+        };
+      case 'malumotnoma':
+        return {
+          to: 'Chilonzor tumani hokimiyati bandlik bo\'limiga',
+          from: 'Fuqaro Usmonova Laylo',
+          detail: 'Fuqaro Usmonova Layloning ushbu tashkilotda 2024-yildan beri bosh hisobchi yordamchisi lavozimida haqiqatdan ham ishlab kelayotganligi va oylik o\'rtacha maoshi 4,500,000 so\'m ekanligi haqida ma\'lumotnoma'
+        };
+      case 'free':
+      default:
+        return {
+          to: 'Bosh boshqarma boshlig\'iga',
+          from: 'Fuqaro Yo\'ldoshev Nodir',
+          detail: 'menga 3 kunlik oilaviy sabablarga ko\'ra mehnat ta\'tili berishingizni so\'rayman'
+        };
+    }
+  };
+
+  const getLocalDraftText = (type: string, to: string, from: string, detail: string) => {
+    const cleanTo = to.trim();
+    const cleanFrom = from.trim();
+    const cleanDetail = detail.trim();
+    const dateStr = new Date().toLocaleDateString('uz-UZ');
+
+    switch (type) {
+      case 'ariza':
+        return `                                            ${cleanTo}
+                                            ${cleanFrom}
+
+                                   ARIZA
+
+      Sizdan, ${cleanDetail} so'rayman.
+
+      Ariza mazmuni qonuniy va rasmiy munosabatlar qoidalariga rioya qilgan holda tuzildi.
+
+      Sana: ${dateStr}
+      Imzo: _____________________`;
+      case 'tushuntirish':
+        return `                                            ${cleanTo}
+                                            ${cleanFrom}
+
+                              TUSHUNTIRISH XATI
+
+      Men, ushbu tushuntirish xatini yozib shuni ma'lum qilamanki, ${cleanDetail}.
+
+      Keltirilgan holatlar haqiqat ekanligini tasdiqlayman va kelgusida bunday kamchiliklar takrorlanmasligiga va'da beraman.
+
+      Sana: ${dateStr}
+      Imzo: _____________________`;
+      case 'tavsifnoma':
+        return `                                  TAVSIFNOMA
+                              (Xodim tavsifnomasi)
+
+      Ushbu tavsifnoma ${cleanTo} taqdim etish uchun ${cleanFrom} tomonidan berildi.
+
+      Xodim to'g'risida ma'lumot: ${cleanDetail}.
+
+      Mazkur tavsifnoma uning talabiga binoan berildi.
+
+      Sana: ${dateStr}
+      Boshqaruv imzosi: _____________________`;
+      case 'shartnoma':
+        return `                                  SHARTNOMA
+                              (Oldi-sotdi bitimi)
+
+      Toshkent shahri                                                   Sana: ${dateStr}
+
+      Biz, bir tomondan ${cleanTo}, va ikkinchi tomondan ${cleanFrom}, kelishilgan holda ushbu shartnomani imzoladik:
+
+      1. Shartnoma predmeti: ${cleanDetail}.
+
+      2. Bitim bo'yicha majburiyatlar to'liq va o'z vaqtida bajarilishiga tomonlar kafolat beradilar.
+
+      Tomonlar imzolari:
+      Sotuvchi: _________________            Sotib oluvchi: _________________`;
+      case 'bildirgi':
+        return `                                            ${cleanTo}
+                                            ${cleanFrom}
+
+                                  BILDIRGI
+                             (Doklad xati)
+
+      Sizga shuni ma'lum qilamanki, ${cleanDetail}.
+
+      Yuqoridagilarni inobatga olgan holda, zarur choralar ko'rishingizni so'rayman.
+
+      Sana: ${dateStr}
+      Xodim imzosi: _____________________`;
+      case 'malumotnoma':
+        return `                                  MA'LUMOTNOMA
+
+      Ushbu ma'lumotnoma ${cleanTo} taqdim etish uchun ${cleanFrom} muomalasiga binoan berildi.
+
+      Tarkibi: ${cleanDetail}.
+
+      Sana: ${dateStr}
+      Mas'ul xodim imzosi: _____________________
+      M.O'. (Muhra o'rniga)`;
+      case 'free':
+      default:
+        return `                                            ${cleanTo}
+                                            ${cleanFrom}
+
+                                RASMIY HUJJAT
+
+      Murojaat mazmuni:
+      ${cleanDetail}
+
+      Ushbu hujjat professional tarzda tizim yordamida shakllantirilgan.
+
+      Sana: ${dateStr}
+      Imzo: _____________________`;
+    }
+  };
+
+  // Sync draft on load or template switch
+  useEffect(() => {
+    const defaults = getTemplateDefaults(selectedTemplate);
+    setDocTo(defaults.to);
+    setDocFrom(defaults.from);
+    setDocDetail(defaults.detail);
+    
+    const draftText = getLocalDraftText(selectedTemplate, defaults.to, defaults.from, defaults.detail);
+    setGeneratedDocText(draftText);
+    setIsAiGenerated(false);
+  }, [selectedTemplate]);
+
+  // Sync draft when simple inputs change, only if it is NOT yet AI generated
+  useEffect(() => {
+    if (!isAiGenerated) {
+      setGeneratedDocText(getLocalDraftText(selectedTemplate, docTo, docFrom, docDetail));
+    }
+  }, [docTo, docFrom, docDetail, isAiGenerated, selectedTemplate]);
+
+  // Connects directly to backend Gemini Document generation
+  const handleGenerateTemplateWord = async () => {
+    if (!generatedDocText) return;
+    setGeneratingDoc(true);
+    try {
+      const docBlob = await createSimpleDocx(generatedDocText);
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(docBlob);
+      link.download = `${selectedTemplate}_hujjat_${Date.now()}.docx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setGeneratingDoc(false);
+    }
+  };
+
+  const handleGenDoc = async () => {
+    setIsGeneratingDocText(true);
+    setErrorMessage('');
+    try {
+      const res = await fetch('/api/gemini/document', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          templateType: selectedTemplate,
+          to: docTo,
+          from: docFrom,
+          detail: docDetail
+        })
+      });
+
+      if (!res.ok) {
+        throw new Error('AI Server call failed');
+      }
+
+      const data = await res.json();
+      if (data.output) {
+        setGeneratedDocText(data.output);
+        setIsAiGenerated(true);
+      } else {
+        setGeneratedDocText(getLocalDraftText(selectedTemplate, docTo, docFrom, docDetail));
+      }
+    } catch (err) {
+      console.error(err);
+      setErrorMessage("Gemini AI bilan ulanib bo'lmadi. Offline shablon shakllantirildi.");
+      setGeneratedDocText(getLocalDraftText(selectedTemplate, docTo, docFrom, docDetail));
+    } finally {
+      setIsGeneratingDocText(false);
+    }
+  };
+
+  const handlePrint = () => {
+    if (!generatedDocText) return;
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert("Iltimos, qalqib chiquvchi oynalar (popup) ochilishiga ruxsat bering.");
+      return;
+    }
+    
+    const isHandwriting = docPreviewMode === 'handwriting';
+    const penColor = handwritingStyle === 'blue' ? '#1d4ed8' : '#1e293b';
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>A4 Chop Etish - Hujjat.uz</title>
+          <link rel="preconnect" href="https://fonts.googleapis.com">
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+          <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=Marck+Script&display=swap" rel="stylesheet">
+          <style>
+            @media print {
+              @page {
+                size: A4;
+                margin: 20mm;
+              }
+              body {
+                margin: 0;
+                padding: 0;
+                background: #fff;
+              }
+              .a4-container {
+                border: none !important;
+                box-shadow: none !important;
+                padding: 0 !important;
+                width: 100% !important;
+                height: auto !important;
+              }
+            }
+            body {
+              font-family: 'Times New Roman', Times, serif;
+              background-color: #f1f5f9;
+              margin: 0;
+              padding: 20px;
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              min-height: 100vh;
+            }
+            .a4-container {
+              background: white;
+              width: 210mm;
+              min-height: 297mm;
+              padding: 20mm 25mm 20mm 25mm;
+              box-sizing: border-box;
+              border: 1px solid #cbd5e1;
+              box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+              white-space: pre-wrap;
+              word-wrap: break-word;
+              position: relative;
+            }
+            .computer {
+              font-family: 'Times New Roman', Times, serif;
+              font-size: 14pt;
+              line-height: 1.6;
+              color: #000;
+            }
+            .handwriting {
+              font-family: 'Caveat', cursive;
+              font-size: 20pt;
+              line-height: 1.5;
+              color: ${penColor};
+              transform: rotate(-0.5deg);
+              letter-spacing: 0.5px;
+            }
+            .lines-background {
+              position: absolute;
+              top: 0;
+              left: 0;
+              right: 0;
+              bottom: 0;
+              background-image: linear-gradient(#e2e8f0 1px, transparent 1px);
+              background-size: 100% 32px;
+              pointer-events: none;
+              opacity: 0.15;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="a4-container \${isHandwriting ? 'handwriting' : 'computer'}">
+            \${isHandwriting ? '<div class="lines-background"></div>' : ''}
+            <div>\${generatedDocText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\\n/g, '<br/>')}</div>
+          </div>
+          <script>
+            window.onload = function() {
+              setTimeout(function() {
+                window.print();
+              }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
 
   // Tools listing
   const TOOLS: PdfTool[] = [
@@ -172,18 +513,272 @@ export default function DocumentCenter({ currentLang, theme = 'dark' }: Document
   return (
     <div className="space-y-8 animate-slide-up">
       {/* Title info */}
-      <div>
-        <h2 className={`text-xl sm:text-2xl font-black font-display tracking-wide ${
-          theme === 'dark' ? 'text-white' : 'text-slate-900'
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div>
+          <h2 className={`text-xl sm:text-2xl font-black font-display tracking-wide ${
+            theme === 'dark' ? 'text-white' : 'text-slate-900'
+          }`}>
+            {t.docCenterTitle}
+          </h2>
+          <p className={`text-xs sm:text-sm mt-1 mb-2 ${theme === 'dark' ? 'text-slate-400 font-medium' : 'text-slate-350'}`}>
+            {theme === 'dark' ? "AI yordamida rasmiy professional arizalar va shartnomalar yaratish hamda ishonchli PDF asboblari." : "Sun'iy intellekt orqali rasmiy arizalar tayyorlash va barcha zaruriy PDF amallari."}
+          </p>
+        </div>
+
+        {/* Sub-navigation tabs within Document Center */}
+        <div className={`flex p-1 rounded-2xl border shadow-md shrink-0 w-full md:w-auto self-start transition duration-200 ${
+          theme === 'dark' ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-100 border-slate-200'
         }`}>
-          {t.docCenterTitle}
-        </h2>
-        <p className={`text-xs sm:text-sm mt-1 ${theme === 'dark' ? 'text-slate-400 font-medium' : 'text-slate-550'}`}>
-          {t.docCenterDesc}
-        </p>
+          <button
+            onClick={() => {
+              setSubTab('templates');
+              setActiveTool(null);
+            }}
+            className={`flex-1 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all duration-300 cursor-pointer flex items-center justify-center gap-2 ${
+              subTab === 'templates' 
+                ? 'bg-indigo-600 text-white shadow' 
+                : theme === 'dark' ? 'text-slate-400 hover:text-slate-205' : 'text-slate-500 hover:text-slate-909'
+            }`}
+          >
+            <FileText className="w-4 h-4" />
+            AI Hujjat Yaratish
+          </button>
+          <button
+            onClick={() => {
+              setSubTab('pdf');
+            }}
+            className={`flex-1 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all duration-300 cursor-pointer flex items-center justify-center gap-2 ${
+              subTab === 'pdf' 
+                ? 'bg-indigo-600 text-white shadow' 
+                : theme === 'dark' ? 'text-slate-400 hover:text-slate-205' : 'text-slate-500 hover:text-slate-909'
+            }`}
+          >
+            <Layers className="w-4 h-4" />
+            PDF Asboblari
+          </button>
+        </div>
       </div>
 
-      {activeTool === null ? (
+      {subTab === 'templates' ? (
+        /* AI DOCUMENT TEMPLATES CREATOR VIEW */
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          
+          {/* Form and Template Selection Column */}
+          <div className="lg:col-span-5 space-y-6">
+            <div className={`rounded-3xl border p-6 shadow-sm ${
+              theme === 'dark' ? 'bg-slate-950/40 border-slate-800' : 'bg-white border-slate-200'
+            }`}>
+              <h3 className={`text-sm font-black text-indigo-550 font-mono tracking-wider uppercase mb-4`}>
+                {t.selectTemplate}
+              </h3>
+              
+              <div className="grid grid-cols-1 xs:grid-cols-2 gap-2.5">
+                {[
+                  { id: 'ariza', label: '✍️ Ariza (Mehnat/Ta\'til)' },
+                  { id: 'tushuntirish', label: '📋 Tushuntirish xati' },
+                  { id: 'tavsifnoma', label: '🎓 Tavsifnoma (Taqdim etish)' },
+                  { id: 'shartnoma', label: '🤝 Oldi-sotdi shartnomasi' },
+                  { id: 'bildirgi', label: '📢 Bildirishnoma (Bildirgi)' },
+                  { id: 'malumotnoma', label: 'ℹ️ Ma\'lumotnoma' },
+                  { id: 'free', label: '✨ Erkin Hujjat yozish' },
+                ].map((tpl) => (
+                  <button
+                    key={tpl.id}
+                    onClick={() => {
+                      setSelectedTemplate(tpl.id);
+                    }}
+                    className={`px-4 py-3 rounded-xl text-xs font-bold text-left transition-all duration-200 cursor-pointer border ${
+                      selectedTemplate === tpl.id
+                        ? 'bg-indigo-600/10 border-indigo-500 text-indigo-500 dark:text-indigo-400 shadow-sm'
+                        : theme === 'dark' 
+                          ? 'border-slate-800 text-slate-300 bg-slate-900/40 hover:bg-slate-900/80 hover:border-slate-700' 
+                          : 'border-slate-200 text-slate-655 bg-slate-50 hover:bg-slate-100 hover:border-slate-300'
+                    }`}
+                  >
+                    {tpl.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Inputs Form */}
+            <div className={`rounded-3xl border p-6 shadow-sm space-y-4 ${
+              theme === 'dark' ? 'bg-slate-950/40 border-slate-800' : 'bg-white border-slate-200'
+            }`}>
+              <div className="flex items-center gap-2 mb-2">
+                <Sparkles className="w-4 h-4 text-indigo-555 animate-pulse" />
+                <h3 className={`text-sm font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                  {t.templateInputHeader}
+                </h3>
+              </div>
+
+              {/* Dynamic Inputs */}
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-450 block mb-1">
+                    {selectedTemplate === 'shartnoma' ? "Sotuvchi ma'lumotlari:" : "Hujjat kimga taqdim etiladi (Qabul qiluvchi):"}
+                  </label>
+                  <input
+                    type="text"
+                    value={docTo}
+                    onChange={(e) => setDocTo(e.target.value)}
+                    className={`w-full text-xs px-3 py-2.5 border rounded-xl font-medium outline-none focus:border-indigo-500 transition duration-200 ${
+                      theme === 'dark' ? 'bg-slate-909 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                    }`}
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-450 block mb-1">
+                    {selectedTemplate === 'shartnoma' ? "Sotib oluvchi ma'lumotlari:" : "Hujjat kim tomonidan taqdim etiladi (Muallif):"}
+                  </label>
+                  <input
+                    type="text"
+                    value={docFrom}
+                    onChange={(e) => setDocFrom(e.target.value)}
+                    className={`w-full text-xs px-3 py-2.5 border rounded-xl font-medium outline-none focus:border-indigo-500 transition duration-200 ${
+                      theme === 'dark' ? 'bg-slate-909 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                    }`}
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-450 block mb-1">
+                    {selectedTemplate === 'shartnoma' ? "Shartnoma predmeti va narxi tafsiloti:" : "Hujjatning qisqacha mazmuni va sababi:"}
+                  </label>
+                  <textarea
+                    rows={4}
+                    value={docDetail}
+                    onChange={(e) => setDocDetail(e.target.value)}
+                    className={`w-full text-xs px-3 py-2.5 border rounded-xl font-medium outline-none focus:border-indigo-500 resize-none transition duration-200 ${
+                      theme === 'dark' ? 'bg-slate-909 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                    }`}
+                  />
+                </div>
+              </div>
+
+              {errorMessage && (
+                <p className="text-xs font-semibold text-rose-500 flex items-center gap-1">
+                  <AlertCircle className="w-3.5 h-3.5" />
+                  {errorMessage}
+                </p>
+              )}
+
+              {/* Actions Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                <button
+                  onClick={handleGenDoc}
+                  disabled={isGeneratingDocText}
+                  className="px-4 py-2.5 rounded-xl text-xs font-bold cursor-pointer transition flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white disabled:opacity-50 active:scale-95 duration-150"
+                >
+                  <Sparkles className="w-4 h-4 text-white" />
+                  {isGeneratingDocText ? "AI Yozmoqda..." : "AI Yordamida Yozish"}
+                </button>
+                <button
+                  onClick={handleGenerateTemplateWord}
+                  disabled={generatingDoc}
+                  className="px-4 py-2.5 rounded-xl text-xs font-bold cursor-pointer transition flex items-center justify-center gap-2 border hover:bg-neutral-100 dark:hover:bg-slate-900 text-slate-350 dark:text-slate-200 border-slate-300 dark:border-slate-700 disabled:opacity-50 active:scale-95 duration-150"
+                >
+                  <Download className="w-4 h-4" />
+                  {generatingDoc ? "Tayyorlanmoqda..." : "Word (.docx) yuklash"}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Interactive Live A4 Preview Column */}
+          <div className="lg:col-span-7 space-y-4">
+            {/* Design Styles controls */}
+            <div className={`p-4 rounded-2xl border flex flex-wrap items-center justify-between gap-4 shadow-sm ${
+              theme === 'dark' ? 'bg-slate-950/20 border-slate-800' : 'bg-slate-100/60 border-slate-200'
+            }`}>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-400 font-mono">Uslub:</span>
+                <button
+                  onClick={() => setDocPreviewMode('computer')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                    docPreviewMode === 'computer'
+                      ? 'bg-indigo-600 text-white shadow'
+                      : theme === 'dark' ? 'text-slate-400 hover:text-slate-200' : 'text-slate-655 hover:text-slate-900'
+                  }`}
+                >
+                  💻 Kompyuter Print
+                </button>
+                <button
+                  onClick={() => setDocPreviewMode('handwriting')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                    docPreviewMode === 'handwriting'
+                      ? 'bg-indigo-600 text-white shadow'
+                      : theme === 'dark' ? 'text-slate-400 hover:text-slate-200' : 'text-slate-655 hover:text-slate-900'
+                  }`}
+                >
+                  ✍️ Qo'lyozma
+                </button>
+              </div>
+
+              {docPreviewMode === 'handwriting' && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-bold text-slate-400 font-mono">Rasm:</span>
+                  <button
+                    onClick={() => setHandwritingStyle('blue')}
+                    className={`w-5 h-5 rounded-full bg-blue-700 transition duration-150 border-2 ${
+                      handwritingStyle === 'blue' ? 'border-white scale-110 shadow' : 'border-transparent'
+                    }`}
+                    title="Ko'k ruchka"
+                  />
+                  <button
+                    onClick={() => setHandwritingStyle('black')}
+                    className={`w-5 h-5 rounded-full bg-slate-900 transition duration-150 border-2 ${
+                      handwritingStyle === 'black' ? 'border-white scale-110 shadow' : 'border-transparent'
+                    }`}
+                    title="Miya ruchka"
+                  />
+                </div>
+              )}
+
+              <button
+                onClick={handlePrint}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow border active:scale-95 transition ${
+                  theme === 'dark' ? 'bg-slate-900 border-slate-800 text-white hover:bg-slate-850' : 'bg-white border-slate-200 text-slate-800 hover:bg-slate-50'
+                }`}
+              >
+                🖨️ Chop etish / PDF saqlash
+              </button>
+            </div>
+
+            {/* A4 Sandbox Core Visual Canvas */}
+            <div className={`relative overflow-auto border rounded-3xl p-4 max-h-[85vh] shadow-2xl flex justify-center ${
+              theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-slate-50 border-slate-200'
+            }`}>
+              <div
+                className={`w-[210mm] min-h-[297mm] p-12 sm:p-20 bg-white text-black shadow-inner relative text-left leading-relaxed break-words whitespace-pre-wrap rounded-xl`}
+                style={{
+                  fontFamily: docPreviewMode === 'handwriting' ? "'Caveat', cursive" : "'Times New Roman', Times, serif",
+                  fontSize: docPreviewMode === 'handwriting' ? "18pt" : "12pt",
+                  color: docPreviewMode === 'handwriting' ? (handwritingStyle === 'blue' ? '#1d4ed8' : '#1e293b') : '#000000',
+                  lineHeight: docPreviewMode === 'handwriting' ? '1.5' : '1.7',
+                }}
+              >
+                {/* Lined Notebook effect for handwriting style */}
+                {docPreviewMode === 'handwriting' && (
+                  <div className="absolute inset-0 pointer-events-none opacity-20 bg-[linear-gradient(#475569_1px,transparent_1px)] bg-[size:100%_28px] mt-10" />
+                )}
+
+                {generatedDocText}
+              </div>
+            </div>
+            
+            <p className="text-[11px] font-medium text-slate-500 flex items-center gap-1.5 font-mono">
+              <AlertCircle className="w-3.5 h-3.5 text-indigo-555" />
+              Tayyorlangan .docx faylni MS Word yoki Google Docs-da bemalol to'liq moslashtira olasiz.
+            </p>
+          </div>
+
+        </div>
+      ) : (
+        /* ORIGINAL PDF & FILE UTILITIES SECTIONS */
+        <div>
+          {activeTool === null ? (
         /* Tools Grid Selection */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {TOOLS.map((tool) => {
@@ -741,6 +1336,8 @@ export default function DocumentCenter({ currentLang, theme = 'dark' }: Document
               </div>
             </div>
           )}
+        </div>
+      )}
         </div>
       )}
     </div>

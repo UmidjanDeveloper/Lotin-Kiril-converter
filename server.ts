@@ -20,7 +20,7 @@ async function startServer() {
   app.use(express.urlencoded({ limit: '25mb', extended: true }));
 
   // Initialize Gemini
-  const apiKey = process.env.GEMINI_API_KEY || "AIzaSyAR_jmp_4GnT2mSM1_rfsZ2Ir_tkcnBHNw";
+  const apiKey = process.env.GEMINI_API_KEY || "AIzaSyBdhZjynoq3RvuX3cU0g6yep_t_7HRkqTE";
   const ai = new GoogleGenAI({
     apiKey: apiKey,
     httpOptions: {

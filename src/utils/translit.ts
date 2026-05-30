@@ -242,11 +242,11 @@ export function cyrillicToLatin(text: string): string {
       continue;
     }
     if (char === 'Ў' || char === 'ў') {
-      result += char === 'Ў' ? "O'" : "o'";
+      result += char === 'Ў' ? "Oʻ" : "oʻ";
       continue;
     }
     if (char === 'Ғ' || char === 'ғ') {
-      result += char === 'Ғ' ? "G'" : "g'";
+      result += char === 'Ғ' ? "Gʻ" : "gʻ";
       continue;
     }
     
@@ -268,11 +268,23 @@ export function cyrillicToLatin(text: string): string {
   return result;
 }
 
+export function normalizeUzbekLatin(text: string): string {
+  if (!text) return '';
+  let res = text;
+  // Standardize g' and o' variations to standard U+02BB ʻ
+  res = res.replace(/([oOöÖ])['’‘ʻʼ`´″′‛]/g, '$1ʻ');
+  res = res.replace(/([gG])['’‘ʻʼ`´″′‛]/g, '$1ʻ');
+  // Normalize remaining standalone apostrophes to standard straight quote '
+  res = res.replace(/(?<![oOgGöÖ])['’‘ʻʼ`´″′‛]/g, "'");
+  return res;
+}
+
 /**
  * Transliterates Uzbek Latin string to Uzbek Cyrillic
  */
 export function latinToCyrillic(text: string): string {
-  const processedText = replaceExceptions(text, LAT_TO_CYR_EXCEPTIONS);
+  const normalized = normalizeUzbekLatin(text);
+  const processedText = replaceExceptions(normalized, LAT_TO_CYR_EXCEPTIONS);
   let result = '';
   const len = processedText.length;
   
