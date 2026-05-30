@@ -1,44 +1,82 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <!-- Rounded corner background (iOS app icon shape) -->
-  <rect width="512" height="512" rx="100" fill="#5c93d1" />
-  
-  <!-- Shadow under the book -->
-  <path d="M 96,110 Q 256,150 416,110 L 416,360 Q 256,400 96,360 Z" fill="#4a7ebc" opacity="0.4" />
-  
-  <!-- Outer Book Cover (Deep blue / white accent) -->
-  <path d="M 100,105 Q 256,145 412,105 L 412,352 Q 256,392 100,352 Z" fill="#ffffff" />
-  
-  <!-- Inner Book Pages with split -->
-  <!-- Left Page -->
-  <path d="M 116,117 Q 250,152 250,154 L 250,344 Q 250,342 116,334 Z" fill="#ffffff" />
-  <!-- Right Page -->
-  <path d="M 396,117 Q 262,152 262,154 L 262,344 Q 262,342 396,334 Z" fill="#ffffff" />
-  
-  <!-- Page line lines (represented in secondary color) -->
-  <!-- Left Page Lines -->
-  <line x1="140" y1="230" x2="224" y2="230" stroke="#5c93d1" stroke-width="8" stroke-linecap="round" opacity="0.8" />
-  <line x1="140" y1="258" x2="224" y2="258" stroke="#5c93d1" stroke-width="8" stroke-linecap="round" opacity="0.8" />
-  
-  <!-- Right Page Lines -->
-  <line x1="288" y1="230" x2="372" y2="230" stroke="#5c93d1" stroke-width="8" stroke-linecap="round" opacity="0.8" />
-  <line x1="288" y1="258" x2="372" y2="258" stroke="#5c93d1" stroke-width="8" stroke-linecap="round" opacity="0.8" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Rich ultra-modern gradient background -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00F2FE" />
+      <stop offset="45%" stop-color="#4FACFE" />
+      <stop offset="100%" stop-color="#7B1FA2" />
+    </linearGradient>
 
-  <!-- "Aa" Text on left page -->
-  <text x="180" y="195" font-family="system-ui, -apple-system, sans-serif" font-size="64" font-weight="700" fill="#467bb7" text-anchor="middle">Aa</text>
-  
-  <!-- "Дд" Text on right page -->
-  <text x="332" y="195" font-family="system-ui, -apple-system, sans-serif" font-size="64" font-weight="700" fill="#467bb7" text-anchor="middle">Дд</text>
-  
-  <!-- Center Exchange Icon (Round badge) -->
-  <circle cx="256" cy="235" r="38" fill="#5c93d1" stroke="#ffffff" stroke-width="6" />
-  
-  <!-- Sync Arrows -->
-  <path d="M 238,235 C 238,225 246,217 256,217 C 262,217 268,220 271,225" fill="none" stroke="#ffffff" stroke-width="5.5" stroke-linecap="round" />
-  <path d="M 268,230 C 268,240 260,248 250,248 C 244,248 238,245 235,240" fill="none" stroke="#ffffff" stroke-width="5.5" stroke-linecap="round" />
-  <!-- Arrow heads -->
-  <polygon points="271,222 275,228 267,228" fill="#ffffff" />
-  <polygon points="235,243 231,237 239,237" fill="#ffffff" />
-  
-  <!-- "Dimu" Text -->
-  <text x="256" y="445" font-family="system-ui, -apple-system, sans-serif" font-size="94" font-weight="800" fill="#ffffff" text-anchor="middle" letter-spacing="2">Dimu</text>
+    <!-- Holographic neon gradient for the 'H' symbol -->
+    <linearGradient id="hGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#7B1FA2" />
+      <stop offset="40%" stop-color="#0072FF" />
+      <stop offset="70%" stop-color="#00F2FE" />
+      <stop offset="100%" stop-color="#4FACFE" />
+    </linearGradient>
+
+    <!-- Glass transparency linear gradients for stacked cards -->
+    <linearGradient id="glass1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.35" />
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.05" />
+    </linearGradient>
+
+    <linearGradient id="glass2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.45" />
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.02" />
+    </linearGradient>
+
+    <!-- Multi-stage drop shadow filters for depth -->
+    <filter id="cardShadow" x="-20%" y="-10%" width="140%" height="145%">
+      <feDropShadow dx="0" dy="18" stdDeviation="15" flood-color="#050B20" flood-opacity="0.42" />
+    </filter>
+
+    <filter id="glassShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="3" dy="10" stdDeviation="10" flood-color="#000000" flood-opacity="0.22" />
+    </filter>
+  </defs>
+
+  <!-- Main rounded canvas square (iOS/macOS modern icon aesthetic) -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)" />
+
+  <!-- Ambient light glow flare -->
+  <circle cx="210" cy="140" r="190" fill="#FFFFFF" opacity="0.12" filter="blur(24px)" />
+
+  <!-- Stack Layer 1: Leftmost Glass Card (rotated negatively) -->
+  <g transform="translate(100, 110) rotate(-11 115 155)">
+    <rect width="220" height="290" rx="32" fill="url(#glass1)" stroke="#FFFFFF" stroke-width="2" stroke-opacity="0.35" filter="url(#glassShadow)" />
+    <!-- Glass lines -->
+    <line x1="35" y1="50" x2="110" y2="50" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" stroke-opacity="0.3" />
+    <line x1="35" y1="72" x2="160" y2="72" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-opacity="0.2" />
+  </g>
+
+  <!-- Stack Layer 2: Middle Translucent Gel Card (rotated positively) -->
+  <g transform="translate(142, 104) rotate(6 115 155)">
+    <rect width="225" height="295" rx="30" fill="url(#glass2)" stroke="#FFFFFF" stroke-width="2" stroke-opacity="0.45" filter="url(#glassShadow)" />
+    <!-- Glowing internal accent dot -->
+    <circle cx="185" cy="45" r="5" fill="#00F2FE" opacity="0.8" />
+  </g>
+
+  <!-- Stack Layer 3: Main Active Front Document Card (White Paper) -->
+  <g filter="url(#cardShadow)">
+    <rect x="150" y="94" width="220" height="294" rx="26" fill="#FFFFFF" />
+    
+    <!-- Paper Header lines -->
+    <line x1="184" y1="130" x2="264" y2="130" stroke="#E2E8F0" stroke-width="8" stroke-linecap="round" />
+    <line x1="184" y1="150" x2="310" y2="150" stroke="#F1F5F9" stroke-width="5" stroke-linecap="round" />
+    <line x1="184" y1="164" x2="234" y2="164" stroke="#F1F5F9" stroke-width="5" stroke-linecap="round" />
+
+    <!-- Highly Stylized Hujjat "H" monogram -->
+    <!-- Consisting of two solid rounded uprights connected by an upward dynamic brush crossbar -->
+    <!-- Left Stem -->
+    <rect x="184" y="196" width="16" height="135" rx="8" fill="url(#hGrad)" />
+    <!-- Right Stem -->
+    <rect x="306" y="196" width="16" height="135" rx="8" fill="url(#hGrad)" />
+    <!-- Elegant upward swooping connector bridge -->
+    <path d="M 194,272 C 220,272 230,228 312,254" fill="none" stroke="url(#hGrad)" stroke-width="16" stroke-linecap="round" />
+    <path d="M 194,272 C 220,272 230,228 312,254" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-opacity="0.4" />
+
+    <!-- Tiny decorative star on the page -->
+    <path d="M 290,132 L 292,136 L 296,137 L 293,140 L 294,144 L 290,142 L 286,144 L 287,140 L 284,137 L 288,136 Z" fill="#00F2FE" />
+  </g>
 </svg>

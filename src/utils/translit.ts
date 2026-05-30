@@ -10,6 +10,57 @@
 const CYR_VOWELS = new Set('аеёиоуэюяўАЕЁИОУЭЮЯЎ');
 const LAT_VOWELS = new Set('aeiouAEIOU');
 
+// Exception dictionaries for high spelling accuracy
+const CYR_TO_LAT_EXCEPTIONS: Record<string, string> = {
+  'Тошкент': 'Toshkent', 'тошкент': 'toshkent',
+  'Йўлдошев': "Yo'ldoshev", 'йўлдошев': "yo'ldoshev",
+  'Юлдашев': "Yo'ldoshev", 'юлдашев': "yo'ldoshev",
+  'Миллий': 'Milliy', 'миллий': 'milliy',
+  'Президент': 'Prezident', 'президент': 'prezident',
+  'Ҳуқуқ': 'Huquq', 'ҳуқуқ': 'huquq',
+  'Судья': 'Sudya', 'судья': 'sudya',
+  'съезд': 'syezd', 'Съезд': 'Syezd',
+  'сентябрь': 'sentabr', 'Сентябрь': 'Sentabr',
+  'октябрь': 'oktabr', 'Октябрь': 'Oktabr',
+  'ноябрь': 'noyabr', 'Ноябрь': 'Noyabr',
+  'декабрь': 'dekabr', 'Декабрь': 'Dekabr',
+  'январь': 'yanvar', 'Январь': 'Yanvar',
+  'февраль': 'fevral', 'Февраль': 'Fevral',
+  'апрель': 'aprel', 'Апрель': 'Aprel',
+  'июнь': 'iyun', 'Июнь': 'Iyun',
+  'июль': 'iyul', 'Июль': 'Iyul'
+};
+
+const LAT_TO_CYR_EXCEPTIONS: Record<string, string> = {
+  'Toshkent': 'Тошкент', 'toshkent': 'тошкент',
+  "Yo'ldoshev": 'Йўлдошев', "yo'ldoshev": 'йўлдошев',
+  'Milliy': 'Миллий', 'milliy': 'миллий',
+  'Prezident': 'Президент', 'prezident': 'президент',
+  'Huquq': 'Ҳуқуқ', 'huquq': 'ҳуқуқ',
+  'Sudya': 'Судья', 'sudya': 'судья',
+  'syezd': 'съезд', 'Syezd': 'Съезд',
+  'sentabr': 'сентябрь', 'Sentabr': 'Сентябрь',
+  'oktabr': 'октябрь', 'Oktabr': 'Октябрь',
+  'noyabr': 'ноябрь', 'Noyabr': 'Ноябрь',
+  'dekabr': 'декабрь', 'Dekabr': 'Декабрь',
+  'yanvar': 'январь', 'Yanvar': 'Январь',
+  'fevral': 'февраль', 'Fevral': 'Февраль',
+  'aprel': 'апрель', 'Aprel': 'Апрель',
+  'iyun': 'июнь', 'Iyun': 'Июнь',
+  'iyul': 'июль', 'Iyul': 'Июль'
+};
+
+function replaceExceptions(text: string, exceptions: Record<string, string>): string {
+  let result = text;
+  const sortedKeys = Object.keys(exceptions).sort((a, b) => b.length - a.length);
+  for (const key of sortedKeys) {
+    const escapedKey = key.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    const regex = new RegExp('(?<![a-zA-Zа-яА-ЯёЁўЎқҚғҒҳҲ])' + escapedKey + '(?![a-zA-Zа-яА-ЯёЁўЎқҚғҒҳҲ])', 'g');
+    result = result.replace(regex, exceptions[key]);
+  }
+  return result;
+}
+
 // Standard single-character mappings
 const CYR_TO_LAT_SINGLE: Record<string, string> = {
   'А': 'A', 'а': 'a',
@@ -109,12 +160,13 @@ export function detectLanguage(text: string): 'cyrillic' | 'latin' {
  * Transliterates Uzbek Cyrillic string to Uzbek Latin
  */
 export function cyrillicToLatin(text: string): string {
+  const processedText = replaceExceptions(text, CYR_TO_LAT_EXCEPTIONS);
   let result = '';
   
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i];
-    const prevChar = i > 0 ? text[i - 1] : '';
-    const nextChar = i < text.length - 1 ? text[i + 1] : '';
+  for (let i = 0; i < processedText.length; i++) {
+    const char = processedText[i];
+    const prevChar = i > 0 ? processedText[i - 1] : '';
+    const nextChar = i < processedText.length - 1 ? processedText[i + 1] : '';
     
     // 1. Handle "Е" and "е"
     if (char === 'е' || char === 'Е') {
@@ -123,7 +175,7 @@ export function cyrillicToLatin(text: string): string {
       
       if (isWordStart || isAfterVowel) {
         if (char === 'Е') {
-          result += isNextCyrUpper(text, i) ? 'YE' : 'Ye';
+          result += isNextCyrUpper(processedText, i) ? 'YE' : 'Ye';
         } else {
           result += 'ye';
         }
@@ -136,7 +188,7 @@ export function cyrillicToLatin(text: string): string {
     // 2. Handle "Ц" and "ц"
     if (char === 'ц' || char === 'Ц') {
       if (char === 'Ц') {
-        result += isNextCyrUpper(text, i) ? 'TS' : 'Ts';
+        result += isNextCyrUpper(processedText, i) ? 'TS' : 'Ts';
       } else {
         result += 'ts';
       }
@@ -145,32 +197,32 @@ export function cyrillicToLatin(text: string): string {
     
     // 3. Handle multi-character Cyrillic letters: Ч, Ш, Ё, Ю, Я, Ў, Ғ, Щ
     if (char === 'Ч' || char === 'ч') {
-      const repl = char === 'Ч' ? (isNextCyrUpper(text, i) ? 'CH' : 'Ch') : 'ch';
+      const repl = char === 'Ч' ? (isNextCyrUpper(processedText, i) ? 'CH' : 'Ch') : 'ch';
       result += repl;
       continue;
     }
     if (char === 'Ш' || char === 'ш') {
-      const repl = char === 'Ш' ? (isNextCyrUpper(text, i) ? 'SH' : 'Sh') : 'sh';
+      const repl = char === 'Ш' ? (isNextCyrUpper(processedText, i) ? 'SH' : 'Sh') : 'sh';
       result += repl;
       continue;
     }
     if (char === 'Щ' || char === 'щ') {
-      const repl = char === 'Щ' ? (isNextCyrUpper(text, i) ? 'SHCH' : 'Shch') : 'shch';
+      const repl = char === 'Щ' ? (isNextCyrUpper(processedText, i) ? 'SHCH' : 'Shch') : 'shch';
       result += repl;
       continue;
     }
     if (char === 'Ё' || char === 'ё') {
-      const repl = char === 'Ё' ? (isNextCyrUpper(text, i) ? 'YO' : 'Yo') : 'yo';
+      const repl = char === 'Ё' ? (isNextCyrUpper(processedText, i) ? 'YO' : 'Yo') : 'yo';
       result += repl;
       continue;
     }
     if (char === 'Ю' || char === 'ю') {
-      const repl = char === 'Ю' ? (isNextCyrUpper(text, i) ? 'YU' : 'Yu') : 'yu';
+      const repl = char === 'Ю' ? (isNextCyrUpper(processedText, i) ? 'YU' : 'Yu') : 'yu';
       result += repl;
       continue;
     }
     if (char === 'Я' || char === 'я') {
-      const repl = char === 'Я' ? (isNextCyrUpper(text, i) ? 'YA' : 'Ya') : 'ya';
+      const repl = char === 'Я' ? (isNextCyrUpper(processedText, i) ? 'YA' : 'Ya') : 'ya';
       result += repl;
       continue;
     }
@@ -205,8 +257,9 @@ export function cyrillicToLatin(text: string): string {
  * Transliterates Uzbek Latin string to Uzbek Cyrillic
  */
 export function latinToCyrillic(text: string): string {
+  const processedText = replaceExceptions(text, LAT_TO_CYR_EXCEPTIONS);
   let result = '';
-  const len = text.length;
+  const len = processedText.length;
   
   // High-performance helper mapping for all possible apostrophe variations in Uzbek typing
   const isApostrophe = (c: string): boolean => {
@@ -234,12 +287,12 @@ export function latinToCyrillic(text: string): string {
   };
 
   for (let i = 0; i < len; i++) {
-    const char = text[i];
+    const char = processedText[i];
     
     // Look ahead characters
-    const char2 = i + 1 < len ? text[i + 1] : '';
-    const char3 = i + 2 < len ? text[i + 2] : '';
-    const char4 = i + 3 < len ? text[i + 3] : '';
+    const char2 = i + 1 < len ? processedText[i + 1] : '';
+    const char3 = i + 2 < len ? processedText[i + 2] : '';
+    const char4 = i + 3 < len ? processedText[i + 3] : '';
     
     const token2 = char + char2;
     const token3 = char + char2 + char3;
@@ -338,7 +391,7 @@ export function latinToCyrillic(text: string): string {
     
     // 3. Handle standalone "E" vs "E" starting word
     if (char === 'e' || char === 'E') {
-      const prevChar = i > 0 ? text[i - 1] : '';
+      const prevChar = i > 0 ? processedText[i - 1] : '';
       const isWordStart = i === 0 || !/[a-zA-Z]/.test(prevChar);
       const isAfterVowel = prevChar ? LAT_VOWELS.has(prevChar) : false;
       

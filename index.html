@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Dimu Konverteri — Kirill va Lotin Transliterator Pro</title>
+    <title>Hujjat.uz — Hujjatlar va Matnlar Markazi</title>
     <!-- Custom Brand Favicon Logo -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/favicon.svg" />
@@ -15,6 +15,8 @@
       window.pdfjsLib = window['pdfjs-dist/build/pdf'];
       window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
     </script>
+    <!-- Inject Tesseract.js for client-side OCR scanned text extraction -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js"></script>
   </head>
   <body>
     <div id="root"></div>
