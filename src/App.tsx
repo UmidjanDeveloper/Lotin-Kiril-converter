@@ -149,7 +149,6 @@ export default function App() {
       <footer className="border-t border-white/5 bg-slate-950/20 mt-12 py-8 text-center text-xs text-slate-500 backdrop-blur">
         <div className="max-w-6xl mx-auto px-4 space-y-2">
           <p>© {new Date().getFullYear()} Dimu konverteri. Milliy va xalqaro transliteratsiya standartlari bo'yicha maxsus sayqallangan platforma.</p>
-          <p className="text-[10px] text-slate-600 font-mono">Version 2.5 — Professional Edition (Oflayn Xavfsiz rejim)</p>
         </div>
       </footer>
     </div>
