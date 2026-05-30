@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Rounded corner background (iOS app icon shape) -->
+  <rect width="512" height="512" rx="100" fill="#5c93d1" />
+  
+  <!-- Shadow under the book -->
+  <path d="M 96,110 Q 256,150 416,110 L 416,360 Q 256,400 96,360 Z" fill="#4a7ebc" opacity="0.4" />
+  
+  <!-- Outer Book Cover (Deep blue / white accent) -->
+  <path d="M 100,105 Q 256,145 412,105 L 412,352 Q 256,392 100,352 Z" fill="#ffffff" />
+  
+  <!-- Inner Book Pages with split -->
+  <!-- Left Page -->
+  <path d="M 116,117 Q 250,152 250,154 L 250,344 Q 250,342 116,334 Z" fill="#ffffff" />
+  <!-- Right Page -->
+  <path d="M 396,117 Q 262,152 262,154 L 262,344 Q 262,342 396,334 Z" fill="#ffffff" />
+  
+  <!-- Page line lines (represented in secondary color) -->
+  <!-- Left Page Lines -->
+  <line x1="140" y1="230" x2="224" y2="230" stroke="#5c93d1" stroke-width="8" stroke-linecap="round" opacity="0.8" />
+  <line x1="140" y1="258" x2="224" y2="258" stroke="#5c93d1" stroke-width="8" stroke-linecap="round" opacity="0.8" />
+  
+  <!-- Right Page Lines -->
+  <line x1="288" y1="230" x2="372" y2="230" stroke="#5c93d1" stroke-width="8" stroke-linecap="round" opacity="0.8" />
+  <line x1="288" y1="258" x2="372" y2="258" stroke="#5c93d1" stroke-width="8" stroke-linecap="round" opacity="0.8" />
+
+  <!-- "Aa" Text on left page -->
+  <text x="180" y="195" font-family="system-ui, -apple-system, sans-serif" font-size="64" font-weight="700" fill="#467bb7" text-anchor="middle">Aa</text>
+  
+  <!-- "Дд" Text on right page -->
+  <text x="332" y="195" font-family="system-ui, -apple-system, sans-serif" font-size="64" font-weight="700" fill="#467bb7" text-anchor="middle">Дд</text>
+  
+  <!-- Center Exchange Icon (Round badge) -->
+  <circle cx="256" cy="235" r="38" fill="#5c93d1" stroke="#ffffff" stroke-width="6" />
+  
+  <!-- Sync Arrows -->
+  <path d="M 238,235 C 238,225 246,217 256,217 C 262,217 268,220 271,225" fill="none" stroke="#ffffff" stroke-width="5.5" stroke-linecap="round" />
+  <path d="M 268,230 C 268,240 260,248 250,248 C 244,248 238,245 235,240" fill="none" stroke="#ffffff" stroke-width="5.5" stroke-linecap="round" />
+  <!-- Arrow heads -->
+  <polygon points="271,222 275,228 267,228" fill="#ffffff" />
+  <polygon points="235,243 231,237 239,237" fill="#ffffff" />
+  
+  <!-- "Dimu" Text -->
+  <text x="256" y="445" font-family="system-ui, -apple-system, sans-serif" font-size="94" font-weight="800" fill="#ffffff" text-anchor="middle" letter-spacing="2">Dimu</text>
+</svg>

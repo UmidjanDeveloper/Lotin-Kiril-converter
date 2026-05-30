@@ -52,9 +52,14 @@ export default function App() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-col sm:flex-row items-center justify-between gap-5">
           <div className="flex items-center gap-4">
             <div className="relative group">
-              <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 opacity-75 blur-md group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse" />
-              <div className="relative w-12 h-12 rounded-2xl bg-[#090e24] border border-white/10 flex items-center justify-center text-transparent bg-clip-text bg-gradient-to-tr from-indigo-400 to-pink-400 font-black text-xl shadow-2xl uppercase tracking-wider font-display font-sans">
-                DM
+              <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 opacity-75 blur-md group-hover:opacity-100 transition duration-1000 group-hover:duration-200" />
+              <div className="relative w-12 h-12 rounded-2xl bg-[#5c93d1] border border-white/10 flex items-center justify-center shadow-2xl overflow-hidden">
+                <img 
+                  src="/favicon.svg" 
+                  alt="Dimu Logo" 
+                  className="w-full h-full object-cover rounded-2xl" 
+                  referrerPolicy="no-referrer"
+                />
               </div>
             </div>
             <div>
@@ -70,7 +75,7 @@ export default function App() {
           <div className="flex items-center gap-3 shrink-0">
             <span className="text-xs font-mono bg-indigo-950/50 text-indigo-300 px-4 py-2 rounded-xl border border-indigo-500/20 flex items-center gap-2 shadow-lg backdrop-blur">
               <Zap className="w-3.5 h-3.5 text-indigo-400 animate-pulse fill-indigo-400/20" />
-              100% Online va Xavfsiz
+              100% Oflayn va Xavfsiz
             </span>
           </div>
         </div>
