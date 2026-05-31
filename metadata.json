@@ -1,6 +1,6 @@
 {
   "name": "Hujjat.uz",
   "description": "O'zbek matn va hujjatlar markazi. Matnlarni o'girish, tarjima, tahrirlash, ishonchli PDF asboblari, shablon generatori va OCR tizimi.",
-  "requestFramePermissions": [],
+  "requestFramePermissions": ["camera"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

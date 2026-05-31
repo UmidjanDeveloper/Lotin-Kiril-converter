@@ -67,20 +67,30 @@ export default function AiCenter({ currentLang, theme = 'dark', onSendToHandwrit
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: sumText, lang: currentLang === 'uz' ? 'uz' : 'ru' }),
       });
+      let rawText = "";
+      try {
+        rawText = await res.text();
+      } catch (textErr) {
+        throw new Error("Tarmoq ulanish xatoligi.");
+      }
+
       if (!res.ok) {
         let errMsg = "";
         try {
-          const errData = await res.json();
+          const errData = JSON.parse(rawText);
           errMsg = errData.error || errData.message;
         } catch {
-          try {
-            const txt = await res.text();
-            errMsg = txt.slice(0, 160);
-          } catch {}
+          errMsg = rawText.slice(0, 160);
         }
         throw new Error(errMsg || "Tahlil xizmati muvaffaqiyatsiz tugadi");
       }
-      const data = await res.json();
+
+      let data: any = {};
+      try {
+        data = JSON.parse(rawText);
+      } catch {
+        throw new Error("Serverdan noto'g'ri ko'rinishdagi ma'lumot qaytdi.");
+      }
       setSumOutput(data.output || "Natija kutilmagan formatda qaytdi.");
     } catch (err: any) {
       console.error("Gemini summarization failed:", err);
@@ -115,20 +125,30 @@ export default function AiCenter({ currentLang, theme = 'dark', onSendToHandwrit
           lang: currentLang === 'uz' ? 'uz' : 'ru'
         }),
       });
+      let rawText = "";
+      try {
+        rawText = await res.text();
+      } catch (textErr) {
+        throw new Error("Tarmoq ulanish xatoligi.");
+      }
+
       if (!res.ok) {
         let errMsg = "";
         try {
-          const errData = await res.json();
+          const errData = JSON.parse(rawText);
           errMsg = errData.error || errData.message;
         } catch {
-          try {
-            const txt = await res.text();
-            errMsg = txt.slice(0, 160);
-          } catch {}
+          errMsg = rawText.slice(0, 160);
         }
         throw new Error(errMsg || "Savolga javob berish muvaffaqiyatsiz bo'ldi");
       }
-      const data = await res.json();
+
+      let data: any = {};
+      try {
+        data = JSON.parse(rawText);
+      } catch {
+        throw new Error("Serverdan noto'g'ri ko'rinishdagi ma'lumot qaytdi.");
+      }
       setMessages(prev => [...prev, { sender: 'bot', text: data.text || "Uzr, savolingizga javob olishda xatolik yuz berdi." }]);
     } catch (err: any) {
       console.error("Gemini chat failed:", err);

@@ -19,10 +19,9 @@ async function startServer() {
   app.use(express.json({ limit: '25mb' }));
   app.use(express.urlencoded({ limit: '25mb', extended: true }));
 
-  // Lazy client getter that safely handles key status
-  const getGeminiClient = () => {
-    let key = process.env.GEMINI_API_KEY || "";
-    key = key.trim();
+  // Helper to retrieve the active API Key / Token
+  const getActiveApiKey = () => {
+    let key = (process.env.GEMINI_API_KEY || process.env.VERCEL_OIDC_TOKEN || "").trim();
     if (
       !key || 
       key === "AIzaSyBdhZjynoq3RvuX3cU0g6yep_t_7HRkqTE" || 
@@ -31,6 +30,11 @@ async function startServer() {
     ) {
       throw new Error("GEMINI_KEY_MISSING_OR_LEAKED");
     }
+    return key;
+  };
+
+  const getGeminiClient = () => {
+    const key = getActiveApiKey();
     return new GoogleGenAI({
       apiKey: key,
       httpOptions: {
@@ -39,6 +43,57 @@ async function startServer() {
         }
       }
     });
+  };
+
+  // Dynamic AI Executor that handles Google Gen AI
+  const executeAiCall = async (options: {
+    prompt: string;
+    image?: { mimeType: string; data: string }; // base64 string
+    isChat?: boolean;
+    messages?: { sender: 'user' | 'bot'; text: string }[];
+  }): Promise<string> => {
+    const ai = getGeminiClient();
+
+    if (options.image) {
+      const response = await ai.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: [
+          {
+            inlineData: {
+              mimeType: options.image.mimeType,
+              data: options.image.data,
+            },
+          },
+          options.prompt,
+        ],
+      });
+      return response.text || "";
+    } else if (options.isChat && options.messages) {
+      // Build standard Gemini structured content history
+      const contents = options.messages
+        .filter(msg => msg.text && msg.text.trim())
+        .map(msg => ({
+          role: msg.sender === 'user' ? 'user' : 'model',
+          parts: [{ text: msg.text }]
+        }));
+
+      contents.push({
+        role: "user",
+        parts: [{ text: options.prompt }]
+      });
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents,
+      });
+      return response.text || "";
+    } else {
+      const response = await ai.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: options.prompt,
+      });
+      return response.text || "";
+    }
   };
 
   const formatGeminiError = (error: any): string => {
@@ -57,13 +112,13 @@ async function startServer() {
     return error?.message || "Tizimli xatolik yuz berdi. Iltimos birozdan keyin qayta urinib ko'ring.";
   };
 
-  // Express middleware to ensure the key exists and attach a lazy GoogleGenAI client
+  // Express middleware to ensure the key exists
   const geminiGuard = (req: any, res: any, next: any) => {
     try {
-      req.ai = getGeminiClient();
+      getActiveApiKey();
       next();
     } catch (err) {
-      console.warn("Gemini Guard triggered: API key is empty, placeholder or reported leaked.");
+      console.warn("Gemini Guard triggered: Token or key is missing / empty.");
       return res.status(403).json({ 
         error: "DIQQAT: GEMINI_API_KEY o'rnatilmagan yoki eskirgan (leaked). Tizim to'laqonli ishlashi uchun iltimos, AI Studio platformasining Sozlamalar (Settings/Secrets) bo'limida o'zingizning shaxsiy GEMINI_API_KEY kalitingizni kiriting. Tizim sozlanguniga qadar, 'OS Labs' bo'limidagi offline mantiqiy yordamchidan foydalanib turishingiz mumkin." 
       });
@@ -76,7 +131,6 @@ async function startServer() {
   // API Route for Translation
   app.post("/api/gemini/translate", async (req, res) => {
     try {
-      const ai = (req as any).ai;
       const { text, sourceLang, targetLang } = req.body;
       if (!text || !text.trim()) {
         return res.status(400).json({ error: "Matn kiritilmadi" });
@@ -90,12 +144,8 @@ Mo'ljallangan maqsad tili: ${targetLang || 'ru'}
 Tarjima qilinadigan matn:
 "${text}"`;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
-        contents: prompt,
-      });
-
-      res.json({ output: response.text });
+      const output = await executeAiCall({ prompt });
+      res.json({ output });
     } catch (error: any) {
       console.error("Translate Error:", error);
       res.status(500).json({ error: formatGeminiError(error) });
@@ -105,7 +155,6 @@ Tarjima qilinadigan matn:
   // API Route for Text Polish / Styling
   app.post("/api/gemini/polish", async (req, res) => {
     try {
-      const ai = (req as any).ai;
       const { text, style } = req.body;
       if (!text || !text.trim()) {
         return res.status(400).json({ error: "Matn kiritilmadi" });
@@ -129,12 +178,8 @@ Uslubiy ko'rsatma: ${styleInstruction}
 Matn:
 "${text}"`;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
-        contents: prompt,
-      });
-
-      res.json({ output: response.text });
+      const output = await executeAiCall({ prompt });
+      res.json({ output });
     } catch (error: any) {
       console.error("Polish Error:", error);
       res.status(500).json({ error: formatGeminiError(error) });
@@ -144,7 +189,6 @@ Matn:
   // API Route for Image OCR (Optical Character Recognition)
   app.post("/api/gemini/ocr", async (req, res) => {
     try {
-      const ai = (req as any).ai;
       const { image } = req.body;
       if (!image) {
         return res.status(400).json({ error: "Rasm ma'lumotlari yuborilmadi" });
@@ -164,20 +208,12 @@ Matn o'zbek (lotin yoki kirill), rus, yoki ingliz tillarida bo'lishi mumkin. Kir
 Matndagi qatorma-qator tuzilmani saqlab qolishga harakat qiling. Doimiy ma'lumotlarni tushirib qoldirmang.
 Hech qanday qo'shimcha tsentzura, sarlavha, kirish gaplari yoki tushuntirishlar qo'shmang. Faqatgina rasmdan o'qilgan matnning o'zini qaytaring.`;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
-        contents: [
-          {
-            inlineData: {
-              mimeType: mimeType,
-              data: base64Data,
-            },
-          },
-          prompt,
-        ],
+      const output = await executeAiCall({
+        prompt,
+        image: { mimeType, data: base64Data }
       });
 
-      res.json({ output: response.text });
+      res.json({ output });
     } catch (error: any) {
       console.error("OCR Error:", error);
       res.status(500).json({ error: formatGeminiError(error) });
@@ -187,7 +223,6 @@ Hech qanday qo'shimcha tsentzura, sarlavha, kirish gaplari yoki tushuntirishlar 
   // API Route for Summarization
   app.post("/api/gemini/summarize", async (req, res) => {
     try {
-      const ai = (req as any).ai;
       const { text, lang } = req.body;
       if (!text || !text.trim()) {
         return res.status(400).json({ error: "Text is required" });
@@ -198,12 +233,8 @@ Muloqot tili / Qaytarilishi kerak bo'lgan til shablonlari: ${lang || 'uz'}.
 Matn:
 ${text}`;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
-        contents: prompt,
-      });
-
-      res.json({ output: response.text });
+      const output = await executeAiCall({ prompt });
+      res.json({ output });
     } catch (error: any) {
       console.error("Summarize Error:", error);
       res.status(500).json({ error: formatGeminiError(error) });
@@ -213,7 +244,6 @@ ${text}`;
   // API Route for Document Templates Generation
   app.post("/api/gemini/document", async (req, res) => {
     try {
-      const ai = (req as any).ai;
       const { templateType, to, from, detail } = req.body;
       
       let typeLabel = "";
@@ -244,12 +274,8 @@ Yo'riqnomalar:
 2. Hech qanday markdown belgilari, ya'ni sarlavha uchun hash (#) g'alamlari yoki qalin matn uchun yulduzchalar (**) MUTLAQO ishlatmang. Hujjatni toza, oddiy matn ko'rinishida yozing, bu bizga uni qo'lyozma va chop etishda chiroyli ko'rsatishga va chop etganda buzilmasligiga yordam beradi.
 3. Kirish va xulosa izohlari (masalan "Mana siz so'ragan ariza:") umuman yozmang. Faqat hujjat matnining o'zini qaytaring.`;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
-        contents: prompt,
-      });
-
-      res.json({ output: response.text || "" });
+      const output = await executeAiCall({ prompt });
+      res.json({ output });
     } catch (error: any) {
       console.error("Document Template Error:", error);
       res.status(500).json({ error: formatGeminiError(error) });
@@ -259,30 +285,21 @@ Yo'riqnomalar:
   // API Route for Q&A Chat
   app.post("/api/gemini/chat", async (req, res) => {
     try {
-      const ai = (req as any).ai;
       const { messages, query, lang } = req.body;
       if (!query || !query.trim()) {
         return res.status(400).json({ error: "Query is required" });
       }
 
-      // Convert messages array to Gemini contents or build a combined chat prompt
-      let context = "Siz aqlli va muloyim hujjatchilik hamda lotin-kirill transliteratsiyasi bo'yicha mutaxassis AI yordamchisiz. Foydalanuvchi taqdim etgan savollarga aniq, lisoniy to'g'ri va professional tarzda javob bering.\n";
-      context += "Muloqot tili: " + (lang || 'uz') + "\n\n";
+      let prompt = "Siz aqlli va muloyim hujjatchilik hamda lotin-kirill transliteratsiyasi bo'yicha mutaxassis AI yordamchisiz. Foydalanuvchi taqdim etgan savollarga aniq, lisoniy to'g'ri va professional tarzda javob bering.\n";
+      prompt += "Muloqot tili: " + (lang || 'uz') + "\n\n";
 
-      if (messages && Array.isArray(messages)) {
-        messages.forEach((msg: any) => {
-          context += `${msg.sender === 'user' ? 'Foydalanuvchi' : 'AI yordamchi'}: ${msg.text}\n`;
-        });
-      }
-      context += `Foydalanuvchi: ${query}\n`;
-      context += `AI yordamchi:`;
-
-      const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
-        contents: context,
+      const text = await executeAiCall({
+        prompt: `${prompt}\nFoydalanuvchi: ${query}`,
+        isChat: true,
+        messages: messages && Array.isArray(messages) ? messages : []
       });
 
-      res.json({ text: response.text });
+      res.json({ text });
     } catch (error: any) {
       console.error("Chat Error:", error);
       res.status(500).json({ error: formatGeminiError(error) });

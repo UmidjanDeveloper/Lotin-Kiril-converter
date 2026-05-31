@@ -141,7 +141,7 @@ export default function OpenSourceLabs({
 
   // --- HANDWRITE DATA & CONFIG STATE ---
   const [hwText, setHwText] = useState('Salom! Bu insoniy qo\'lyozma simulyatori va studiyasidir.\nMen ushbu yozilgan matnlarni shunchaki kompyuter shriftida emas, balki xuddi haqiqiy daftar varag\'ida oobiydiy chiziqli, matematika kataklarida yoki rasmiy va oq varaqda yozilgan insoniy qo\'lyozmaga aylantira olaman!\n\nHattoki kompyuterdan tayyor Word (.docx) yoki matnli (.txt) hujjat yuklasangiz ham, men uni o\'qib avtomatik ravishda chiroyli daftarga tushirib beraman!\n\nYozuvning chekka chizig\'ini (margin), harflar tebranishi va jitterini boshqaring hamda tayyor natijani bitta tugma orqali rasm qilib yuklab oling.\n\nSana: ' + new Date().toLocaleDateString() + '\nImzo: ________________');
-  const [hwFont, setHwFont] = useState<'Caveat' | 'Marck Script'>('Caveat');
+  const [hwFont, setHwFont] = useState<'Caveat' | 'Marck Script' | 'Bad Script'>('Caveat');
   const [hwPaper, setHwPaper] = useState<'ruled' | 'grid' | 'blank' | 'yellow'>('ruled');
   const [hwPen, setHwPen] = useState<'#2563eb' | '#1e3a8a' | '#111827' | '#dc2626'>('#2563eb');
   const [hwSize, setHwSize] = useState<number>(20);
@@ -157,6 +157,20 @@ export default function OpenSourceLabs({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sheetCanvasRef = useRef<HTMLCanvasElement>(null);
 
+  // Redraw canvas sheet when params change
+  useEffect(() => {
+    drawHandwriteSheet();
+  }, [hwText, hwFont, hwPaper, hwPen, hwSize, hwJitterValue, hwLineSpace]);
+
+  // Keep re-drawing the canvas as fonts load dynamically in the browser
+  useEffect(() => {
+    if (typeof document !== 'undefined' && (document as any).fonts) {
+      (document as any).fonts.ready.then(() => {
+        drawHandwriteSheet();
+      });
+    }
+  }, [hwText, hwFont]);
+
   // Listen to shared handwrite updates
   useEffect(() => {
     if (sharedHandwriteText) {
@@ -166,11 +180,6 @@ export default function OpenSourceLabs({
       }
     }
   }, [sharedHandwriteText, clearSharedHandwriteText]);
-
-  // Redraw canvas sheet when params change
-  useEffect(() => {
-    drawHandwriteSheet();
-  }, [hwText, hwFont, hwPaper, hwPen, hwSize, hwJitterValue, hwLineSpace]);
 
   // --- FILE PARSERS (DOCX, PDF AND TXT) ---
   const parseDocxFile = async (file: File): Promise<string> => {
@@ -646,15 +655,16 @@ export default function OpenSourceLabs({
               {/* Font chooser */}
               <div>
                 <label className="text-[11px] font-bold text-slate-400 font-mono block mb-2 uppercase">{t.hwFontFamily}</label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   {[
-                    { id: 'Caveat', name: 'Caveat (Stylized Cursive)' },
-                    { id: 'Marck Script', name: 'Marck Script (Elegant)' }
+                    { id: 'Caveat', name: 'Caveat (Lotin & Kirill)' },
+                    { id: 'Marck Script', name: 'Marck Script (Nozik)' },
+                    { id: 'Bad Script', name: 'Bad Script (Tabiiy Cursive)' }
                   ].map((f) => (
                     <button
                       key={f.id}
                       onClick={() => setHwFont(f.id as any)}
-                      className={`p-2 text-xs font-bold border rounded-xl transition cursor-pointer ${
+                      className={`p-2.5 text-[11px] font-bold border rounded-xl leading-tight transition cursor-pointer flex items-center justify-center text-center ${
                         hwFont === f.id
                           ? 'bg-indigo-600 text-white border-indigo-600 shadow'
                           : theme === 'dark' 
@@ -888,6 +898,22 @@ export default function OpenSourceLabs({
         <p className="font-sans text-left">
           {t.laNotice}
         </p>
+      </div>
+
+      {/* Invisible Cyrillic and Uzbek characters force preloader to ensure canvas drawing picks up handwriting woff2 subsets immediately */}
+      <div 
+        style={{ 
+          position: 'absolute', 
+          opacity: 0, 
+          pointerEvents: 'none', 
+          width: '1px', 
+          height: '1px', 
+          overflow: 'hidden' 
+        }}
+      >
+        <span style={{ fontFamily: '"Caveat"' }}>ўғқҳ ЎҒҚҲ аёжзийклмнопрстуфхцчшщъыь</span>
+        <span style={{ fontFamily: '"Marck Script"' }}>ўғқҳ ЎҒҚҲ аёжзийклмнопрстуфхцчшщъыь</span>
+        <span style={{ fontFamily: '"Bad Script"' }}>ўғқҳ ЎҒҚҲ аёжзийклмнопрстуфхцчшщъыь</span>
       </div>
 
     </div>

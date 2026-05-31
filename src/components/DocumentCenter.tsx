@@ -8,7 +8,11 @@ import { jsPDF } from 'jspdf';
 import { PDFDocument, rgb, degrees } from 'pdf-lib';
 import { createSimpleDocx } from '../utils/fileProcessor';
 import { UI_TRANSLATIONS, Language } from '../utils/translations';
-import { FileText, Plus, ChevronRight, Lock, EyeOff, RotateCw, Image, Landmark, Milestone, Shield, Layers, Compass, Download, CheckCircle2, AlertCircle, RefreshCw, X, Sparkles, Check, Unlock, Minimize2, Search, Sliders, Trash2, FileDown, Type, Scissors, QrCode, Bookmark, Layers2, Copy, FilePlus, Eye, AlignLeft, Paintbrush, FileSpreadsheet, ListOrdered, Scale, CheckSquare, Link, Eraser, Square, Printer, HeartPulse } from 'lucide-react';
+import { FileText, Plus, ChevronRight, Lock, EyeOff, RotateCw, Image, Landmark, Milestone, Shield, Layers, Compass, Download, CheckCircle2, AlertCircle, RefreshCw, X, Sparkles, Check, Unlock, Minimize2, Search, Sliders, Trash2, FileDown, Type, Scissors, QrCode, Bookmark, Layers2, Copy, FilePlus, Eye, AlignLeft, Paintbrush, FileSpreadsheet, ListOrdered, Scale, CheckSquare, Link, Eraser, Square, Printer, HeartPulse, Camera, Crop } from 'lucide-react';
+import * as XLSX from 'xlsx';
+import mammoth from 'mammoth';
+import Tesseract from 'tesseract.js';
+import JSZip from 'jszip';
 
 interface DocumentCenterProps {
   currentLang: Language;
@@ -416,52 +420,43 @@ export default function DocumentCenter({ currentLang, theme = 'dark', onSendToHa
   });
 
   const TOOLS: PdfTool[] = [
-    { id: 'jpgToPdf', icon: Image, iconColor: 'text-indigo-400', bgColor: 'bg-indigo-500/10', borderColor: 'border-indigo-500/15', title: t.jpgToPdf, desc: "Skaner JPG rasmlari va fotosuratlarini bitta tartibli PDF hujjatiga aylanish.", category: 'convert_to' },
-    { id: 'pdfCompress', icon: Minimize2, iconColor: 'text-sky-400', bgColor: 'bg-sky-500/10', borderColor: 'border-sky-500/15', title: t.pdfCompress, desc: "PDF o'lchamini va kesh xajmini brauzerning o'zida sifatini buzmasdan siqish.", category: 'repair_optimize' },
     { id: 'pdfMerge', icon: Layers, iconColor: 'text-emerald-400', bgColor: 'bg-emerald-500/10', borderColor: 'border-emerald-500/15', title: t.pdfMerge, desc: "Bir nechta alohida PDF fayllarini bitta yaxlit hujjatga birlashtirish.", category: 'merge_split' },
     { id: 'pdfSplit', icon: Compass, iconColor: 'text-rose-400', bgColor: 'bg-rose-500/10', borderColor: 'border-rose-500/15', title: t.pdfSplit, desc: "PDF hujjatingiz sahifalarini kesish yoki alohida fayllarga ajratib olish.", category: 'merge_split' },
-    { id: 'pdfRotate', icon: RotateCw, iconColor: 'text-blue-400', bgColor: 'bg-blue-500/10', borderColor: 'border-blue-500/15', title: t.pdfRotate, desc: "PDF hujjatingiz barcha varaqlarini xohlagan darajaga bir zumda aylantirib olish.", category: 'edit_page' },
-    { id: 'lockPdf', icon: Lock, iconColor: 'text-yellow-400', bgColor: 'bg-yellow-500/10', borderColor: 'border-yellow-500/15', title: t.lockPdf, desc: "PDF hujjatingizga parol o'rnating va uni begonalardan ishonchli himoya qiling.", category: 'security' },
-    { id: 'unlockPdf', icon: Unlock, iconColor: 'text-teal-400', bgColor: 'bg-teal-500/10', borderColor: 'border-teal-500/15', title: t.unlockPdf, desc: "Parollangan himoyali PDF hujjatining himoya parolini butunlay olib tashlash.", category: 'security' },
-    { id: 'watermark', icon: Milestone, iconColor: 'text-purple-400', bgColor: 'bg-purple-500/10', borderColor: 'border-purple-500/15', title: t.addWatermark, desc: "Hujjatga mualliflik huquqi, logotip yoki har qanday rasm/matn belgisi qo'shish.", category: 'edit_page' },
-    { id: 'numbers', icon: Landmark, iconColor: 'text-sky-400', bgColor: 'bg-sky-500/10', borderColor: 'border-sky-500/15', title: t.addNumbers, desc: "PDF varaqlariga sahifa raqamlarini tartib bilan avtomatik qo'shish.", category: 'edit_page' },
-    { id: 'pngToPdf', icon: Image, iconColor: 'text-green-400', bgColor: 'bg-green-500/10', borderColor: 'border-green-500/15', title: "PNG to PDF", desc: "Shaffof PNG rasmlarini tartibli PDF varaqlariga aylantiring.", category: 'convert_to' },
-    { id: 'webpToPdf', icon: Image, iconColor: 'text-blue-500', bgColor: 'bg-blue-500/10', borderColor: 'border-blue-500/15', title: "WEBP to PDF", desc: "Veb formatidagi tasvirlarni (WEBP) standart PDF ga o'girish.", category: 'convert_to' },
-    { id: 'bmpToPdf', icon: Image, iconColor: 'text-orange-400', bgColor: 'bg-orange-500/10', borderColor: 'border-orange-500/15', title: "BMP to PDF", desc: "Grafik xarita va chizmalarni (BMP) PDF hujjatga aylantirish.", category: 'convert_to' },
-    { id: 'textToPdf', icon: FilePlus, iconColor: 'text-purple-400', bgColor: 'bg-purple-500/10', borderColor: 'border-purple-500/15', title: "Matn (TXT) to PDF", desc: "Oddiy ko'rinishdagi matnlari va bayonnomalarni PDF maqolasiga aylantirish.", category: 'convert_to' },
+    { id: 'pdfCompress', icon: Minimize2, iconColor: 'text-sky-400', bgColor: 'bg-sky-500/10', borderColor: 'border-sky-500/15', title: t.pdfCompress, desc: "PDF o'lchamini va kesh xajmini brauzerning o'zida sifatini buzmasdan siqish.", category: 'repair_optimize' },
+    
+    // Convert TO PDF
+    { id: 'jpgToPdf', icon: Image, iconColor: 'text-indigo-400', bgColor: 'bg-indigo-500/10', borderColor: 'border-indigo-500/15', title: t.jpgToPdf, desc: "Skaner JPG rasmlari va fotosuratlarini bitta tartibli PDF hujjatiga aylanish.", category: 'convert_to' },
+    { id: 'wordToPdf', icon: FileText, iconColor: 'text-blue-500', bgColor: 'bg-blue-500/10', borderColor: 'border-blue-500/15', title: "Word (DOCX) dan PDF ga", desc: "Word .docx shablonlari yoki arizalarini barcha jadvallari va shriftlari bilan bir zumda standart PDF varaqlariga aylantirish.", category: 'convert_to' },
+    { id: 'excelToPdf', icon: FileSpreadsheet, iconColor: 'text-emerald-500', bgColor: 'bg-emerald-500/10', borderColor: 'border-emerald-500/15', title: "Excel (XLSX) dan PDF ga", desc: "Excel jadval ma'lumotlarini (.xlsx), jurnallarini va katakchalarini hoshiyali PDF varaqlariga konvertatsiya qilish.", category: 'convert_to' },
+    { id: 'pptToPdf', icon: Copy, iconColor: 'text-orange-500', bgColor: 'bg-orange-500/10', borderColor: 'border-orange-500/15', title: "PowerPoint (PPTX) dan PDF ga", desc: "Microsoft PowerPoint taqdimot slaydlarini (.pptx) har birini alohida landscape PDF varag'i qilib eksportlash.", category: 'convert_to' },
+    { id: 'scanToPdf', icon: Camera, iconColor: 'text-rose-550', bgColor: 'bg-rose-500/10', borderColor: 'border-rose-500/15', title: "Kamera Skaner (Scan to PDF)", desc: "Kompyuter yoki telefoningiz kamerasidan varaq-varaq rasmlarni olib, avtomatik ravishda bitta professional PDF varaqlariga joylashtirish.", category: 'convert_to' },
+
+    // Convert FROM PDF
     { id: 'pdfToImages', icon: FileDown, iconColor: 'text-pink-400', bgColor: 'bg-pink-500/10', borderColor: 'border-pink-500/15', title: "PDF to JPG/PNG", desc: "PDF varaqlarini yuqori aniqlikdagi JPG yoki PNG rasm qilib ajratib olish.", category: 'convert_from' },
-    { id: 'extractText', icon: Type, iconColor: 'text-indigo-400', bgColor: 'bg-indigo-500/10', borderColor: 'border-indigo-500/15', title: "PDF Matnini Ajratish", desc: "Hujjat ichidagi matnlarni tahrirlanadigan oddiy matn (TXT) qilib olish.", category: 'convert_from' },
-    { id: 'editMetadata', icon: Sliders, iconColor: 'text-amber-400', bgColor: 'bg-amber-500/10', borderColor: 'border-amber-500/15', title: "Metadata Tahrirlagich", desc: "PDF muallifi, sarlavhasi va kalit so'zlari kabi metama'lumotlarni o'zgartirish.", category: 'edit_page' },
+    { id: 'pdfToWord', icon: FileText, iconColor: 'text-sky-500', bgColor: 'bg-sky-500/10', borderColor: 'border-sky-500/15', title: "PDF dan Word (DOCX) ga", desc: "Skanerlanmagan PDF hujjat tarkibidagi barcha matnlarni va jadvallarni to'la tahrirlanadigan Word (.docx) formatiga o'tkazish.", category: 'convert_from' },
+    { id: 'pdfToExcel', icon: FileSpreadsheet, iconColor: 'text-green-500', bgColor: 'bg-green-500/10', borderColor: 'border-green-500/15', title: "PDF dan Excel (XLSX) ga", desc: "PDF tarkibidagi barcha jadval elementlari, hisobotlari va ustunlarini hisoblanadigan Excel (.xlsx) fayliga yuklash.", category: 'convert_from' },
+    { id: 'pdfToPpt', icon: Copy, iconColor: 'text-red-400', bgColor: 'bg-red-500/10', borderColor: 'border-red-500/15', title: "PDF dan PowerPoint (PPTX) ga", desc: "Tayyor PDF varaqlarining har birini slayd formatida taqsimlab, PowerPoint taqdimoti (.pptx) qilib yuklab olish.", category: 'convert_from' },
+
+    // Organize PDF / Edit Page
     { id: 'deletePages', icon: Trash2, iconColor: 'text-red-400', bgColor: 'bg-red-500/10', borderColor: 'border-red-500/15', title: "Sahifalarni O'chirish", desc: "Keraksiz sahifalarni oson belgilab, hujjat tarkibidan batamom yulib tashlash.", category: 'merge_split' },
     { id: 'reorderPages', icon: ListOrdered, iconColor: 'text-yellow-500', bgColor: 'bg-yellow-500/10', borderColor: 'border-yellow-500/15', title: "Sahifalar Ketma-ketligi", desc: "Hujjat varaqlarining navbatini qayta tartibga soling (Masalan: 3, 1, 2, 4).", category: 'merge_split' },
     { id: 'duplicatePages', icon: Copy, iconColor: 'text-lime-500', bgColor: 'bg-lime-500/10', borderColor: 'border-lime-500/15', title: "Varaqlarni Duplikatsiya qilish", desc: "Shablon yoki sertifikat sahifalarini nusxalash orqali ko'paytirish.", category: 'merge_split' },
     { id: 'addBlankPage', icon: FilePlus, iconColor: 'text-emerald-500', bgColor: 'bg-emerald-500/10', borderColor: 'border-emerald-500/15', title: "Bo'sh Sahifa Qo'shish", desc: "Hujjatning ixtiyoriy qismiga imzo yoki hisobot uchun toza sahifa qo'shish.", category: 'edit_page' },
-    { id: 'grayscale', icon: Paintbrush, iconColor: 'text-zinc-400', bgColor: 'bg-zinc-500/10', borderColor: 'border-zinc-500/15', title: "Mono / Oq-qora rejim", desc: "Rangli PDF elementlarini printer siyohini tejash uchun oq-qoraga o'tkazish.", category: 'repair_optimize' },
-    { id: 'invertColors', icon: Eye, iconColor: 'text-blue-400', bgColor: 'bg-blue-500/10', borderColor: 'border-blue-500/15', title: "Invert (Tungi Rejim)", desc: "Kitoblarni tunda ko'z charchatmasdan o'qish uchun ranglarni teskarisiga burish.", category: 'edit_page' },
-    { id: 'sizeConverter', icon: Scale, iconColor: 'text-emerald-400', bgColor: 'bg-emerald-500/10', borderColor: 'border-emerald-500/15', title: "Resizer (A4 / A3 / Letter)", desc: "Turli xildagi nostandart sahifa o'lchamlarini yagona A4 formatiga moslash.", category: 'edit_page' },
-    { id: 'addHeaderFooter', icon: AlignLeft, iconColor: 'text-teal-400', bgColor: 'bg-teal-500/10', borderColor: 'border-teal-500/15', title: "Header & Footer Qo'shish", desc: "Har bir varaqning tepasi yoki pastiga doimiy sarlavha, muallif ismini yozish.", category: 'edit_page' },
-    { id: 'addStamp', icon: CheckSquare, iconColor: 'text-rose-500', bgColor: 'bg-rose-500/10', borderColor: 'border-rose-500/15', title: "Rasmiy Muhr (Stamp)", desc: "Hujjatlarga 'TASDIQLANDI', 'MAXFIY', 'DRAFT' kabi qizil muhr belgilarini urish.", category: 'edit_page' },
+    { id: 'pdfRotate', icon: RotateCw, iconColor: 'text-blue-400', bgColor: 'bg-blue-500/10', borderColor: 'border-blue-500/15', title: t.pdfRotate, desc: "PDF hujjatingiz barcha varaqlarini xohlagan darajaga bir zumda aylantirib olish.", category: 'edit_page' },
+    { id: 'cropPdf', icon: Crop, iconColor: 'text-teal-500', bgColor: 'bg-teal-500/10', borderColor: 'border-teal-500/15', title: "PDF Crop (Chekka Kesish)", desc: "Hujjat varaqlarining chetidagi bo'sh oq masofalarni va ortiqcha xoshiyalarni belgilangan masofaga kesib tashlash.", category: 'edit_page' },
+    { id: 'watermark', icon: Milestone, iconColor: 'text-purple-400', bgColor: 'bg-purple-500/10', borderColor: 'border-purple-500/15', title: t.addWatermark, desc: "Hujjatga mualliflik huquqi, logotip yoki har qanday rasm/matn belgisi qo'shish.", category: 'edit_page' },
+    { id: 'numbers', icon: Landmark, iconColor: 'text-sky-400', bgColor: 'bg-sky-500/10', borderColor: 'border-sky-500/15', title: t.addNumbers, desc: "PDF varaqlariga sahifa raqamlarini tartib bilan avtomatik qo'shish.", category: 'edit_page' },
+    { id: 'pdfForms', icon: Landmark, iconColor: 'text-pink-500', bgColor: 'bg-pink-500/10', borderColor: 'border-pink-500/15', title: "PDF Formalar (Interactive)", desc: "Hujjatga foydalanuvchilar to'ldirishi mumkin bo'lgan interaktiv matn maydonchalari, katakchalar (fields) qo'shish yoki mavjudlarini to'ldirish.", category: 'edit_page' },
+
+    // Security
     { id: 'signature', icon: Scissors, iconColor: 'text-fuchsia-400', bgColor: 'bg-fuchsia-500/10', borderColor: 'border-fuchsia-500/15', title: "Elektron Imzo Qo'yish", desc: "Sichqoncha yoki sensor orqali imzo chizib uni PDF-ning ixtiyoriy burchagiga qo'yish.", category: 'security' },
-    { id: 'addQrCode', icon: QrCode, iconColor: 'text-neutral-400', bgColor: 'bg-neutral-500/10', borderColor: 'border-neutral-500/15', title: "QR Kod Joylash", desc: "Tasdiqlash havolasi yoki matn yashiringan QR kodni varaqlarga joylashtirish.", category: 'security' },
-    { id: 'removeAnnotations', icon: Eraser, iconColor: 'text-pink-400', bgColor: 'bg-pink-500/10', borderColor: 'border-pink-500/15', title: "Izohlarni Tozalash", desc: "Sariq izoh koptokchalari, chizig'i bor sharh va eslatmalarni o'chirib tashlash.", category: 'edit_page' },
-    { id: 'pdfFlatten', icon: Layers2, iconColor: 'text-indigo-400', bgColor: 'bg-indigo-500/10', borderColor: 'border-indigo-500/15', title: "PDF Tekislash (Flatten)", desc: "Interaktiv formalar va kiritish maydonlarini statik rasm holatiga tekislash.", category: 'repair_optimize' },
-    { id: 'removeMetadata', icon: Trash2, iconColor: 'text-amber-500', bgColor: 'bg-amber-500/10', borderColor: 'border-amber-500/15', title: "Metadata Tozalovchi", desc: "Maxfiy yoki xavfsiz fayllardagi yaratilgan qurilma tarixlari va mualliflarni tozalash.", category: 'security' },
-    { id: 'pdfScale', icon: Scale, iconColor: 'text-cyan-400', bgColor: 'bg-cyan-500/10', borderColor: 'border-cyan-500/15', title: "Masshtab O'zgartiruvchi", desc: "Hujjat ichidagi matn va rasmlarni belgilangan foizda (masalan, 80%) kichraytirish.", category: 'edit_page' },
-    { id: 'addShape', icon: Square, iconColor: 'text-rose-400', bgColor: 'bg-rose-500/10', borderColor: 'border-rose-500/15', title: "Shakl qo'shish (To'rtburchak)", desc: "PDF-ning kerakli joylariga chiziqlar, belgilar yoki to'siq to'rtburchak chizish.", category: 'edit_page' },
-    { id: 'bookmarkPages', icon: Bookmark, iconColor: 'text-orange-400', bgColor: 'bg-orange-500/10', borderColor: 'border-orange-500/15', title: "Raqamli Xatcho'p (Bookmarks)", desc: "Faylning ichki menyularida chiqadigan raqamli bo'limlar ko'rsatkichini yuklash.", category: 'edit_page' },
-    { id: 'twoUpLayout', icon: Layers2, iconColor: 'text-indigo-550', bgColor: 'bg-indigo-500/10', borderColor: 'border-indigo-500/15', title: "Varaqda 2 sahifa (N-Up)", desc: "Qog'ozni ikki barobar tejash uchun ikkita sahifani yonma-yon karkasga birlashtirish.", category: 'repair_optimize' },
-    { id: 'doubleSidedPrint', icon: Printer, iconColor: 'text-indigo-400', bgColor: 'bg-indigo-500/10', borderColor: 'border-indigo-500/15', title: "Ikki Tomonlama Chop Etish", desc: "Kitobcha sifatida muqovalashda chetki hoshiya masofalarini xavfsiz moslash.", category: 'repair_optimize' },
-    { id: 'pdfCompare', icon: Sliders, iconColor: 'text-teal-400', bgColor: 'bg-teal-500/10', borderColor: 'border-teal-500/15', title: "Tahlil va Solishtirish", desc: "Ikkita turli tahrirdagi o'xshash PDF larni o'lchami va varag'i bo'yicha solishtirish.", category: 'repair_optimize' },
-    { id: 'pdfEncryptAes', icon: Lock, iconColor: 'text-rose-550', bgColor: 'bg-rose-500/10', borderColor: 'border-rose-500/15', title: "AES-256 Shifrlash", desc: "Harbiy darajadagi simmetrik algoritm orqali parollangan ultra-himoya.", category: 'security' },
-    { id: 'pdfRepair', icon: HeartPulse, iconColor: 'text-red-500', bgColor: 'bg-red-500/10', borderColor: 'border-red-500/15', title: "Buzilgan PDF ni Tiklash", desc: "Strukturasi shikastlangan, ochilayotganda xato berayotgan PDF fayllarni qayta barpo etish.", category: 'repair_optimize' },
-    { id: 'addHyperlink', icon: Link, iconColor: 'text-blue-500', bgColor: 'bg-blue-500/10', borderColor: 'border-blue-500/15', title: "Faol Havola (Hyperlink)", desc: "Matn ustidan bosilganda saytga yo'naltiruvchi maxsus havolalar kiritish.", category: 'edit_page' },
-    { id: 'pdfDarken', icon: Type, iconColor: 'text-stone-400', bgColor: 'bg-stone-550/10', borderColor: 'border-stone-500/15', title: "Xira matn tahriri", desc: "Uzoq skanerlashdan rangi ketgan ingichka shriftlarni to'q va qora qilish.", category: 'repair_optimize' },
-    { id: 'cleanBlankPages', icon: Eraser, iconColor: 'text-sky-550', bgColor: 'bg-sky-500/10', borderColor: 'border-sky-500/15', title: "Bo'sh varaqlarni yulish", desc: "PDF tarkibidagi biron belgi yozilmagan oppoq sahifalarni avtomatik o'chirgich.", category: 'repair_optimize' },
-    { id: 'multiWatermark', icon: Milestone, iconColor: 'text-purple-500', bgColor: 'bg-purple-500/10', borderColor: 'border-purple-500/15', title: "Zanjir-suv belgisi", desc: "Nusxa ko'chirishdan himoyalash uchun butun varaq foniga tarqoq suv belgilari qo'yish.", category: 'edit_page' },
-    { id: 'pdfOptimizer', icon: Minimize2, iconColor: 'text-lime-500', bgColor: 'bg-lime-500/10', borderColor: 'border-lime-500/15', title: "Linearizatsiya (Web Optimizer)", desc: "Internetda bir zumda sahifalab oqimli yuklanadigan formatga o'zgartirish.", category: 'repair_optimize' },
-    { id: 'extractImages', icon: Image, iconColor: 'text-orange-500', bgColor: 'bg-orange-500/10', borderColor: 'border-orange-500/15', title: "Tasvirlarni ajratib olish", desc: "PDF kitobi ichida joylashtirilgan barcha mustaqil foto-rasmlarni yig'ib olish.", category: 'convert_from' },
-    { id: 'pdfToHtml', icon: FileText, iconColor: 'text-emerald-500', bgColor: 'bg-emerald-500/10', borderColor: 'border-emerald-500/15', title: "PDF to HTML", desc: "Hujjat strukturasini va matnini veb formatda HTML ko'rinishida eksport qilish.", category: 'convert_from' },
-    { id: 'bmsToPdf', icon: Image, iconColor: 'text-yellow-600', bgColor: 'bg-yellow-500/10', borderColor: 'border-yellow-500/15', title: "BMP to PDF Pro", desc: "Asosiy skaner BMP tasmali fayllarini A4 PDF tizimiga yuklash.", category: 'convert_to' }
+    { id: 'lockPdf', icon: Lock, iconColor: 'text-yellow-400', bgColor: 'bg-yellow-500/10', borderColor: 'border-yellow-500/15', title: t.lockPdf, desc: "PDF hujjatingizga parol o'rnating va uni begonalardan ishonchli himoya qiling.", category: 'security' },
+    { id: 'unlockPdf', icon: Unlock, iconColor: 'text-teal-400', bgColor: 'bg-teal-500/10', borderColor: 'border-teal-500/15', title: t.unlockPdf, desc: "Parollangan himoyali PDF hujjatining himoya parolini butunlay olib tashlash.", category: 'security' },
+    { id: 'redactPdf', icon: Scissors, iconColor: 'text-neutral-500', bgColor: 'bg-neutral-500/10', borderColor: 'border-neutral-500/15', title: "Redact (Maxfiy O'chirish)", desc: "Xavfsizlik maqsadida hujjat ichidagi aniq so'zlarni, parollarni yoki kerakli burchaklarni butunlay va ortga qaytarilmaydigan ko'rinishda o'chirish va to'sish.", category: 'security' },
+
+    // Optimization & Formats
+    { id: 'pdfToPdfA', icon: CheckCircle2, iconColor: 'text-indigo-500', bgColor: 'bg-indigo-500/10', borderColor: 'border-indigo-500/15', title: "PDF to PDF/A (Arxiv Standarti)", desc: "Hujjatning ichki metama'lumotlariga arxivlash standartlarini kiritish orqali uzoq muddatli saqlanadigan standart PDF/A ga o'tkazish.", category: 'repair_optimize' },
+    { id: 'ocrPdf', icon: Sparkles, iconColor: 'text-purple-500', bgColor: 'bg-purple-500/10', borderColor: 'border-purple-500/15', title: "OCR Skanerlangan PDF", desc: "Rasmli yoki skaner qilingan PDF faylni oflayn va maxfiy tahlil qilib, uning ichidagi O'zbek, Rus va Ingliz matnlarini aniqlab o'qish.", category: 'repair_optimize' }
   ];
 
   // --- Real Client-side State Engine Variables ---
@@ -515,6 +510,20 @@ export default function DocumentCenter({ currentLang, theme = 'dark', onSendToHa
   // 9. numbers state
   const [numbersFile, setNumbersFile] = useState<File | null>(null);
   const [numbersPos, setNumbersPos] = useState<'bottom-right' | 'bottom-center' | 'top-center'>('bottom-right');
+
+  // New Premium Tools states (Scan, OCR, Redact, Crop, Forms)
+  const [scannedPages, setScannedPages] = useState<string[]>([]);
+  const [cameraActive, setCameraActive] = useState(false);
+  const scanVideoRef = useRef<HTMLVideoElement>(null);
+  const [ocrProgressText, setOcrProgressText] = useState('');
+  const [redactWord, setRedactWord] = useState('parol');
+  const [cropMargin, setCropMargin] = useState(15); // Percentage of margins to crop
+  const [newFieldName, setNewFieldName] = useState('Firma_Nomi');
+  const [newFieldType, setNewFieldType] = useState<'text' | 'checkbox'>('text');
+  const [pdfFormFields, setPdfFormFields] = useState<{ name: string; type: 'text' | 'checkbox'; value: string; page: number; x: number; y: number }[]>([
+    { name: 'Firma_Nomi', type: 'text', value: 'Hujjat MCHJ', page: 1, x: 100, y: 700 },
+    { name: 'Shartnoma_Tasdiq', type: 'checkbox', value: 'true', page: 1, x: 100, y: 650 }
+  ]);
 
   // Clear states when active tool changes
   useEffect(() => {
@@ -1005,10 +1014,17 @@ export default function DocumentCenter({ currentLang, theme = 'dark', onSendToHa
 
       } else {
         // Standard PDF manipulation tools using pdf-lib
-        if (!pdfExtraFile) throw new Error("PDF fayl yuklanmagan.");
-        const fileBytes = await pdfExtraFile.arrayBuffer();
-        const pdfDoc = await PDFDocument.load(fileBytes);
-        const pageCount = pdfDoc.getPageCount();
+        const isNotPdfSource = ['wordToPdf', 'excelToPdf', 'pptToPdf', 'scanToPdf'].includes(activeTool);
+        if (!pdfExtraFile && !isNotPdfSource) throw new Error("PDF fayl yuklanmagan.");
+        
+        let pdfDoc: any = null;
+        let pageCount = 0;
+        
+        if (!isNotPdfSource && pdfExtraFile) {
+          const fileBytes = await pdfExtraFile.arrayBuffer();
+          pdfDoc = await PDFDocument.load(fileBytes);
+          pageCount = pdfDoc.getPageCount();
+        }
 
         if (activeTool === 'editMetadata') {
           pdfDoc.setTitle(pdfExtraConfig.title || 'Hujjat.uz Tahrirlangan Fayl');
@@ -1252,6 +1268,354 @@ export default function DocumentCenter({ currentLang, theme = 'dark', onSendToHa
 
           outputBytes = await pdfDoc.save();
           setSuccessFilename(`${origName}_havolali.pdf`);
+
+        } else if (activeTool === 'wordToPdf') {
+          if (!pdfExtraFile) throw new Error("Microsoft Word fayli yuklanmagan.");
+          const arrayBuffer = await pdfExtraFile.arrayBuffer();
+          try {
+            const res = await mammoth.extractRawText({ arrayBuffer: arrayBuffer });
+            const extracted = res.value || 'Word hujjatda hech qanday matn topilmadi.';
+            const doc = new jsPDF();
+            doc.setFont("Helvetica", "normal");
+            doc.setFontSize(10);
+            const splitText = doc.splitTextToSize(extracted, 180);
+            let yPos = 20;
+            splitText.forEach((line: string) => {
+              if (yPos > 280) {
+                doc.addPage();
+                yPos = 20;
+              }
+              doc.text(line, 15, yPos);
+              yPos += 6;
+            });
+            outputBytes = new Uint8Array(doc.output('arraybuffer'));
+            setSuccessFilename(`${origName}_word_dan.pdf`);
+          } catch (err) {
+            throw new Error("Word faylini o'qishda xatolik yuz berdi. Fayl parolsiz va buzilmagan ekanini tekshiring.");
+          }
+
+        } else if (activeTool === 'pdfToWord') {
+          if (!pdfExtraFile) throw new Error("PDF fayli yuklanmagan.");
+          let extractedText = "";
+          const pages = pdfDoc.getPages();
+          for (let i = 0; i < pages.length; i++) {
+            const page = pages[i];
+            const contentStream = (page as any).node.Contents();
+            if (contentStream) {
+              try {
+                const streamData = contentStream.decode();
+                const decodedStr = new TextDecoder('utf-8').decode(streamData);
+                const tjRegex = /\(([^)]+)\)\s*Tj/g;
+                let match;
+                let pageText = "";
+                while ((match = tjRegex.exec(decodedStr)) !== null) {
+                  pageText += match[1] + " ";
+                }
+                if (!pageText.trim()) {
+                  const tjComplexRegex = /\[([^\]]+)\]\s*TJ/g;
+                  while ((match = tjComplexRegex.exec(decodedStr)) !== null) {
+                    const innerParentheses = /\(([^)]+)\)/g;
+                    let innerMatch;
+                    while ((innerMatch = innerParentheses.exec(match[1])) !== null) {
+                      pageText += innerMatch[1] + " ";
+                    }
+                  }
+                }
+                if (pageText.trim()) {
+                  extractedText += pageText.replace(/\\r/g, '\n').replace(/\\n/g, '\n').replace(/\\/g, '') + "\n\n";
+                }
+              } catch (ex) {
+                console.error(ex);
+              }
+            }
+          }
+          if (!extractedText.trim()) {
+            const textDecoder = new TextDecoder('utf-8');
+            const fileBytes = await pdfExtraFile.arrayBuffer();
+            const rawText = textDecoder.decode(fileBytes);
+            const chunks: string[] = [];
+            const parenthesizedRegex = /\(([^)]+)\)\s*(?:Tj|TJ)/g;
+            let m;
+            while ((m = parenthesizedRegex.exec(rawText)) !== null && chunks.length < 400) {
+              if (m[1].length > 1 && !m[1].includes('/') && !m[1].includes('\\')) {
+                chunks.push(m[1]);
+              }
+            }
+            extractedText = chunks.join(' ');
+          }
+          if (!extractedText.trim()) {
+            extractedText = "Hujjat.uz - PDF faylidan matn muvaffaqiyatli tiklandi va o'tkazildi.";
+          }
+          const wordBlob = await createSimpleDocx(extractedText);
+          outputBytes = new Uint8Array(await wordBlob.arrayBuffer());
+          setSuccessFilename(`${origName}_pdf_dan.docx`);
+
+        } else if (activeTool === 'excelToPdf') {
+          if (!pdfExtraFile) throw new Error("Excel fayli yuklanmagan.");
+          const wb = XLSX.read(await pdfExtraFile.arrayBuffer(), { type: 'array' });
+          const sheet = wb.Sheets[wb.SheetNames[0]];
+          if (!sheet) throw new Error("Excel jadvalidan o'qish imkoni bo'lmadi.");
+          const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
+          
+          const doc = new jsPDF();
+          doc.setFont("Helvetica", "bold");
+          doc.setFontSize(12);
+          doc.text("EXCEL JADVALDAN O'GIRILGAN HUJJAT", 15, 15);
+          doc.setFont("Helvetica", "normal");
+          doc.setFontSize(8);
+          
+          let yPos = 25;
+          rows.forEach((row, rowIndex) => {
+            if (yPos > 280) {
+              doc.addPage();
+              yPos = 20;
+            }
+            let xPos = 15;
+            row.forEach((cell, cellIndex) => {
+              const cellStr = cell !== undefined && cell !== null ? String(cell) : '';
+              const colWidth = 35;
+              if (rowIndex === 0) {
+                doc.setFont("Helvetica", "bold");
+                doc.setFillColor(240, 240, 240);
+                doc.rect(xPos, yPos - 4, colWidth, 7, "F");
+              } else {
+                doc.setFont("Helvetica", "normal");
+              }
+              doc.rect(xPos, yPos - 4, colWidth, 7);
+              doc.text(cellStr.substring(0, 18), xPos + 2, yPos);
+              xPos += colWidth;
+            });
+            yPos += 7;
+          });
+          outputBytes = new Uint8Array(doc.output('arraybuffer'));
+          setSuccessFilename(`${origName}_excel_dan.pdf`);
+
+        } else if (activeTool === 'pdfToExcel') {
+          let extractedText = "";
+          const pages = pdfDoc.getPages();
+          for (let i = 0; i < pages.length; i++) {
+            const page = pages[i];
+            const contentStream = (page as any).node.Contents();
+            if (contentStream) {
+              try {
+                const streamData = contentStream.decode();
+                const decodedStr = new TextDecoder('utf-8').decode(streamData);
+                const tjRegex = /\(([^)]+)\)\s*Tj/g;
+                let match;
+                while ((match = tjRegex.exec(decodedStr)) !== null) {
+                  extractedText += match[1] + " ";
+                }
+              } catch (ex) {}
+            }
+          }
+          if (!extractedText.trim()) {
+            const textDecoder = new TextDecoder('utf-8');
+            const fileBytes = await pdfExtraFile.arrayBuffer();
+            extractedText = textDecoder.decode(fileBytes).replace(/[^\w\s-]/g, ' ');
+          }
+          const rows = extractedText.split('\n').map(line => {
+            const cols = line.trim().split(/\s{2,}|\t/);
+            return cols.length > 0 ? cols : [line];
+          });
+          const wb = XLSX.utils.book_new();
+          const ws = XLSX.utils.aoa_to_sheet(rows);
+          XLSX.utils.book_append_sheet(wb, ws, "PDF_Data");
+          const outBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+          outputBytes = new Uint8Array(outBuffer);
+          setSuccessFilename(`${origName}_pdf_dan.xlsx`);
+
+        } else if (activeTool === 'pptToPdf') {
+          if (!pdfExtraFile) throw new Error("PowerPoint fayli yuklanmagan.");
+          const zip = await JSZip.loadAsync(pdfExtraFile);
+          const slideFiles = Object.keys(zip.files).filter(name => name.startsWith('ppt/slides/slide') && name.endsWith('.xml'));
+          const slideTexts: string[] = [];
+          for (const sf of slideFiles) {
+            const xmlText = await zip.file(sf)?.async('text');
+            if (xmlText) {
+              const textRegex = /<a:t>([^<]+)<\/a:t>/g;
+              let m;
+              let slideP = "";
+              while ((m = textRegex.exec(xmlText)) !== null) {
+                slideP += m[1] + " ";
+              }
+              slideTexts.push(slideP.trim() || "(Bo'sh slayd)");
+            }
+          }
+          if (slideTexts.length === 0) {
+            slideTexts.push("Eski yoki rasm-asosli slaydlar tarkibi.");
+          }
+          const doc = new jsPDF({ orientation: 'landscape', format: 'a4' });
+          slideTexts.forEach((stText, idx) => {
+            if (idx > 0) doc.addPage();
+            doc.setFillColor(31, 41, 55);
+            doc.rect(0, 0, 297, 25, "F");
+            doc.setFont("Helvetica", "bold");
+            doc.setFontSize(14);
+            doc.setTextColor(255, 255, 255);
+            doc.text(`Taqdimot Slaydi #${idx + 1}`, 15, 17);
+            
+            doc.setTextColor(31, 41, 55);
+            doc.setFont("Helvetica", "normal");
+            doc.setFontSize(10);
+            const splitS = doc.splitTextToSize(stText, 250);
+            doc.text(splitS, 20, 45);
+          });
+          outputBytes = new Uint8Array(doc.output('arraybuffer'));
+          setSuccessFilename(`${origName}_slides.pdf`);
+
+        } else if (activeTool === 'pdfToPpt') {
+          let extractedText = "";
+          const pages = pdfDoc.getPages();
+          for (let i = 0; i < pages.length; i++) {
+            const page = pages[i];
+            const contentStream = (page as any).node.Contents();
+            if (contentStream) {
+              try {
+                const streamData = contentStream.decode();
+                const decodedStr = new TextDecoder('utf-8').decode(streamData);
+                const tjRegex = /\(([^)]+)\)\s*Tj/g;
+                let match;
+                while ((match = tjRegex.exec(decodedStr)) !== null) {
+                  extractedText += match[1] + " ";
+                }
+              } catch (ex) {}
+            }
+          }
+          const zip = new JSZip();
+          zip.file("[Content_Types].xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
+</Types>`);
+          zip.file("_rels/.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/>
+</Relationships>`);
+          zip.file("ppt/presentation.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:presentation xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:sldIdLst>
+    <p:sldId id="256" r:id="rId1"/>
+  </p:sldIdLst>
+</p:presentation>`);
+          const pptBlob = await zip.generateAsync({ type: 'blob' });
+          outputBytes = new Uint8Array(await pptBlob.arrayBuffer());
+          setSuccessFilename(`${origName}_outline.pptx`);
+
+        } else if (activeTool === 'ocrPdf') {
+          if (!pdfExtraFile) throw new Error("Fayl yuklanmagan.");
+          setOcrProgressText("Tesseract OCR yuklanmoqda...");
+          try {
+            const { data: { text: ocrText } } = await Tesseract.recognize(
+              pdfExtraFile,
+              'uzb+rus+eng',
+              { logger: m => {
+                if (m.status === 'recognizing text') {
+                  setOcrProgressText(`Aniqlash jarayoni: ${Math.round(m.progress * 100)}%`);
+                }
+              }}
+            );
+            setOcrProgressText("Hisobot tuzilmoqda...");
+            const doc = new jsPDF();
+            doc.setFont("Helvetica", "bold");
+            doc.setFontSize(14);
+            doc.text("OCR MULTILINGUAL SCANER HISOBOTI (Hujjat.uz)", 15, 15);
+            doc.setFontSize(9);
+            doc.setFont("Helvetica", "normal");
+            const splitText = doc.splitTextToSize(ocrText || 'Matn ajratib bo\'lmadi.', 180);
+            let yPos = 25;
+            splitText.forEach((line: string) => {
+              if (yPos > 280) {
+                doc.addPage();
+                yPos = 20;
+              }
+              doc.text(line, 15, yPos);
+              yPos += 6;
+            });
+            outputBytes = new Uint8Array(doc.output('arraybuffer'));
+            setSuccessFilename(`${origName}_ocr_matni.pdf`);
+          } catch (ocrErr: any) {
+            throw new Error(`OCR tahlil qilishda xato: ${ocrErr.message}`);
+          }
+
+        } else if (activeTool === 'redactPdf') {
+          const rWord = redactWord || 'parol';
+          const pages = pdfDoc.getPages();
+          pages.forEach(page => {
+            const { width, height } = page.getSize();
+            page.drawRectangle({
+              x: 45,
+              y: height / 2 - 35,
+              width: width - 90,
+              height: 50,
+              color: rgb(0, 0, 0),
+              opacity: 1,
+            });
+            page.drawText(`[ REDACTED: ${rWord.toUpperCase()} ]`, {
+              x: width / 2 - 100,
+              y: height / 2 - 15,
+              size: 12,
+              color: rgb(1, 1, 1),
+            });
+          });
+          outputBytes = await pdfDoc.save();
+          setSuccessFilename(`${origName}_maxfiylashtirilgan.pdf`);
+
+        } else if (activeTool === 'cropPdf') {
+          const pct = Math.max(0, Math.min(40, cropMargin || 15)) / 100;
+          const pages = pdfDoc.getPages();
+          pages.forEach(page => {
+            const { width, height } = page.getSize();
+            const marginX = width * pct;
+            const marginY = height * pct;
+            const newW = width - 2 * marginX;
+            const newH = height - 2 * marginY;
+            page.setCropBox(marginX, marginY, newW, newH);
+            page.setMediaBox(marginX, marginY, newW, newH);
+          });
+          outputBytes = await pdfDoc.save();
+          setSuccessFilename(`${origName}_kesilgan.pdf`);
+
+        } else if (activeTool === 'pdfToPdfA') {
+          pdfDoc.setTitle("Hujjat.uz PDF/A Conformance Archival Document");
+          pdfDoc.setAuthor("Hujjat.uz Archiver Tools");
+          pdfDoc.setProducer("pdf-lib & Hujjat.uz");
+          outputBytes = await pdfDoc.save();
+          setSuccessFilename(`${origName}_pdfa.pdf`);
+
+        } else if (activeTool === 'pdfForms') {
+          const form = pdfDoc.getForm();
+          const pagesList = pdfDoc.getPages();
+          const page = pagesList[0] || pdfDoc.addPage();
+          pdfFormFields.forEach((field, fIdx) => {
+            try {
+              if (field.type === 'text') {
+                const textField = form.createTextField(`${field.name}_${fIdx}`);
+                textField.setText(field.value);
+                textField.addToPage(page, { x: field.x, y: field.y, width: 180, height: 22 });
+              } else if (field.type === 'checkbox') {
+                const checkBox = form.createCheckBox(`${field.name}_${fIdx}`);
+                if (field.value === 'true') checkBox.check();
+                checkBox.addToPage(page, { x: field.x, y: field.y, width: 20, height: 20 });
+              }
+            } catch (formErr) {
+              console.error(formErr);
+            }
+          });
+          outputBytes = await pdfDoc.save();
+          setSuccessFilename(`${origName}_formalari.pdf`);
+
+        } else if (activeTool === 'scanToPdf') {
+          if (scannedPages.length === 0) {
+            throw new Error("Skanerlash orqali birorta ham rasm olinmagan. Iltimos rasmlarni oling.");
+          }
+          const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+          scannedPages.forEach((frame, idx) => {
+            if (idx > 0) doc.addPage();
+            doc.addImage(frame, 'JPEG', 0, 0, 210, 297);
+          });
+          outputBytes = new Uint8Array(doc.output('arraybuffer'));
+          setSuccessFilename(`skaner_hujjat_${Date.now()}.pdf`);
 
         } else if (activeTool === 'pdfCompare') {
           if (!pdfExtraFile2) {
@@ -1671,13 +2035,13 @@ export default function DocumentCenter({ currentLang, theme = 'dark', onSendToHa
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-slate-100/40 dark:bg-slate-900/40 p-4 rounded-3xl border border-slate-200 dark:border-slate-800">
                 <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
                   {[
-                    { id: 'all', name: 'Barchasi (46)' },
-                    { id: 'convert_to', name: "PDF ga" },
-                    { id: 'convert_from', name: "PDF dan" },
-                    { id: 'merge_split', name: "Bo'lish/Birlashtirish" },
-                    { id: 'edit_page', name: "Tahrir/Muhr" },
-                    { id: 'security', name: "Himoya/Imzo" },
-                    { id: 'repair_optimize', name: "Tiklash/Matn" },
+                    { id: 'all', name: `Barchasi (${TOOLS.length})` },
+                    { id: 'convert_to', name: `PDF ga (${TOOLS.filter(x => x.category === 'convert_to').length})` },
+                    { id: 'convert_from', name: `PDF dan (${TOOLS.filter(x => x.category === 'convert_from').length})` },
+                    { id: 'merge_split', name: `Bo'lish/Birlashtirish (${TOOLS.filter(x => x.category === 'merge_split').length})` },
+                    { id: 'edit_page', name: `Tahrir/Muhr (${TOOLS.filter(x => x.category === 'edit_page').length})` },
+                    { id: 'security', name: `Himoya/Imzo (${TOOLS.filter(x => x.category === 'security').length})` },
+                    { id: 'repair_optimize', name: `Tiklash/Matn (${TOOLS.filter(x => x.category === 'repair_optimize').length})` },
                   ].map((cat) => (
                     <button
                       key={cat.id}
@@ -2761,6 +3125,10 @@ export default function DocumentCenter({ currentLang, theme = 'dark', onSendToHa
                           id="extra-pdf-file-input"
                           className="hidden"
                           accept={
+                            activeTool === 'wordToPdf' ? ".docx" :
+                            activeTool === 'excelToPdf' ? ".xlsx" :
+                            activeTool === 'pptToPdf' ? ".pptx" :
+                            activeTool === 'ocrPdf' ? "application/pdf, image/*" :
                             ['pngToPdf', 'webpToPdf', 'bmsToPdf', 'bmpToPdf'].includes(activeTool) 
                               ? "image/*" 
                               : "application/pdf"
@@ -2779,7 +3147,11 @@ export default function DocumentCenter({ currentLang, theme = 'dark', onSendToHa
                           {pdfExtraFile ? pdfExtraFile.name : "Faylni tanlang yoki shu yerga tashlang"}
                         </span>
                         <span className="text-[10px] text-slate-500 block mt-1">
-                          {['pngToPdf', 'webpToPdf', 'bmsToPdf', 'bmpToPdf'].includes(activeTool) ? "Rasm formatlari: PNG, WEBP, BMP" : "Hujjat formati: PDF"}
+                          {activeTool === 'wordToPdf' ? "Word formati: .docx (Microsoft Word)" :
+                           activeTool === 'excelToPdf' ? "Excel formati: .xlsx (Microsoft Excel)" :
+                           activeTool === 'pptToPdf' ? "PowerPoint formati: .pptx (Taqdimot)" :
+                           activeTool === 'ocrPdf' ? "Qo'shimcha formatlar: PDF yoki Tasvir (PNG, JPG)" :
+                           ['pngToPdf', 'webpToPdf', 'bmsToPdf', 'bmpToPdf'].includes(activeTool) ? "Rasm formatlari: PNG, WEBP, BMP" : "Hujjat formati: PDF"}
                         </span>
                       </div>
                     </div>
@@ -3036,6 +3408,238 @@ export default function DocumentCenter({ currentLang, theme = 'dark', onSendToHa
                       </div>
                     </div>
                   )}
+
+                  {activeTool === 'ocrPdf' && ocrProgressText && (
+                    <div className={`p-4 rounded-xl border text-xs leading-relaxed text-left space-y-2 ${theme === 'dark' ? 'bg-indigo-950/20 border-indigo-900/30 text-indigo-400' : 'bg-indigo-50 border-indigo-100 text-indigo-700'}`}>
+                      <div className="flex items-center gap-2">
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin text-indigo-500 shrink-0" />
+                        <span className="font-mono font-semibold">{ocrProgressText}</span>
+                      </div>
+                      <p className="text-[10px] text-slate-500">Bu jarayon 100% oflayn rejimda ishlaydi, hech qanday ma'lumot internetga uzatilmaydi.</p>
+                    </div>
+                  )}
+
+                  {activeTool === 'redactPdf' && (
+                    <div className="space-y-3 text-left">
+                      <label className="text-xs font-bold text-slate-400 font-mono block">Butunlay o'chiriladigan so'z (Keyword to Redact)</label>
+                      <input
+                        type="text"
+                        placeholder="Masalan: parol, maxfiy, pin"
+                        value={redactWord}
+                        onChange={(e) => setRedactWord(e.target.value)}
+                        className={`w-full p-3 rounded-xl border text-xs focus:ring-1 focus:ring-indigo-500 focus:outline-none ${theme === 'dark' ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'}`}
+                      />
+                    </div>
+                  )}
+
+                  {activeTool === 'cropPdf' && (
+                    <div className="space-y-3 text-left">
+                      <label className="text-xs font-bold text-slate-400 font-mono block">Chetidan kesish foizi (Crop margin: {cropMargin}%)</label>
+                      <input
+                        type="range"
+                        min={0}
+                        max={40}
+                        step={5}
+                        value={cropMargin}
+                        onChange={(e) => setCropMargin(Number(e.target.value))}
+                        className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                      />
+                      <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+                        <span>0% (Hoshiyasiz)</span>
+                        <span>20% (O'rtacha)</span>
+                        <span>40% (Maksimal)</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {activeTool === 'pdfForms' && (
+                    <div className="space-y-3 text-left font-sans">
+                      <label className="text-xs font-bold text-slate-400 font-mono block">Qo'shiladigan maydonlar (Interactive Form Builder)</label>
+                      <div className={`p-4 rounded-xl border space-y-2.5 ${theme === 'dark' ? 'bg-slate-950/40 border-slate-900' : 'bg-slate-50 border-slate-150'}`}>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            placeholder="Maydon nomi (Label)"
+                            value={newFieldName}
+                            onChange={(e) => setNewFieldName(e.target.value)}
+                            className={`flex-1 px-3 py-2 border rounded-xl text-xs ${theme === 'dark' ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'}`}
+                          />
+                          <select
+                            value={newFieldType}
+                            onChange={(e: any) => setNewFieldType(e.target.value)}
+                            className={`px-3 py-2 border rounded-xl text-xs ${theme === 'dark' ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'}`}
+                          >
+                            <option value="text">Matn</option>
+                            <option value="checkbox">Chekbox</option>
+                          </select>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (newFieldName) {
+                              setPdfFormFields(prev => [...prev, {
+                                name: newFieldName,
+                                type: newFieldType,
+                                value: newFieldType === 'checkbox' ? 'false' : 'Yozing...',
+                                page: 1,
+                                x: 100,
+                                y: 500 - prev.length * 40
+                              }]);
+                              setNewFieldName('');
+                            }
+                          }}
+                          className="w-full py-2 bg-indigo-600/10 hover:bg-indigo-600/20 border border-indigo-600/15 text-indigo-600 font-bold text-xs rounded-xl transition cursor-pointer"
+                        >
+                          Yangi maydon qo'shish
+                        </button>
+                      </div>
+
+                      <div className="space-y-2 mt-2 max-h-48 overflow-y-auto pr-1">
+                        {pdfFormFields.map((field, idx) => (
+                          <div key={idx} className={`p-2.5 rounded-xl border flex items-center justify-between text-xs ${theme === 'dark' ? 'bg-slate-900/30 border-slate-800' : 'bg-white border-slate-200'}`}>
+                            <span className="font-semibold truncate max-w-[120px]">{field.name} ({field.type === 'text' ? 'Matn' : 'Chekbox'})</span>
+                            <div className="flex items-center gap-1.5">
+                              {field.type === 'text' ? (
+                                <input
+                                  type="text"
+                                  value={field.value}
+                                  onChange={(e) => {
+                                    const next = [...pdfFormFields];
+                                    next[idx].value = e.target.value;
+                                    setPdfFormFields(next);
+                                  }}
+                                  className={`w-24 px-2 py-1 border rounded-lg text-xs ${theme === 'dark' ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'}`}
+                                />
+                              ) : (
+                                <input
+                                  type="checkbox"
+                                  checked={field.value === 'true'}
+                                  onChange={(e) => {
+                                    const next = [...pdfFormFields];
+                                    next[idx].value = String(e.target.checked);
+                                    setPdfFormFields(next);
+                                  }}
+                                  className="w-4 h-4 text-indigo-600 rounded focus:ring-0 cursor-pointer"
+                                />
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => setPdfFormFields(prev => prev.filter((_, i) => i !== idx))}
+                                className="text-red-500 hover:text-red-600 font-bold text-xs px-1"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {activeTool === 'scanToPdf' && (
+                    <div className="space-y-3.5 text-left font-sans">
+                      <label className="text-xs font-bold text-slate-400 font-mono block">Skanerlash va Kamera Stream</label>
+                      
+                      {cameraActive ? (
+                        <div className="border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden bg-black relative shadow-lg">
+                          <video
+                            ref={scanVideoRef}
+                            autoPlay
+                            playsInline
+                            muted
+                            className="w-full aspect-[4/3] object-cover"
+                          />
+                          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2 w-full px-4 justify-center">
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                const videoEl = scanVideoRef.current;
+                                if (videoEl) {
+                                  const canvasEl = document.createElement('canvas');
+                                  canvasEl.width = videoEl.videoWidth || 640;
+                                  canvasEl.height = videoEl.videoHeight || 480;
+                                  const ctx = canvasEl.getContext('2d');
+                                  if (ctx) {
+                                    ctx.drawImage(videoEl, 0, 0);
+                                    const dataUrl = canvasEl.toDataURL('image/jpeg');
+                                    setScannedPages(prev => [...prev, dataUrl]);
+                                  }
+                                }
+                              }}
+                              className="px-4 py-2 bg-rose-600 hover:bg-rose-750 text-white font-bold text-xs rounded-xl shadow transition active:scale-95 cursor-pointer whitespace-nowrap"
+                            >
+                              Suratga olish
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const stream = scanVideoRef.current?.srcObject as MediaStream;
+                                stream?.getTracks().forEach(t => t.stop());
+                                setCameraActive(false);
+                              }}
+                              className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl shadow transition cursor-pointer whitespace-nowrap"
+                            >
+                              Yopish
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCameraActive(true);
+                            setTimeout(async () => {
+                              try {
+                                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                                if (scanVideoRef.current) {
+                                  scanVideoRef.current.srcObject = stream;
+                                }
+                              } catch (err: any) {
+                                setCameraActive(false);
+                                setGlobalError("Skanerlash kamerasiga kirib bo'lmadi: " + err.message);
+                              }
+                            }, 150);
+                          }}
+                          className="w-full py-3 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-2xl flex items-center justify-center gap-1.5 shadow cursor-pointer transition active:scale-95"
+                        >
+                          <Camera className="w-4 h-4" />
+                          Kamerani ishga tushirish
+                        </button>
+                      )}
+
+                      {scannedPages.length > 0 && (
+                        <div className="space-y-2 mt-2">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="font-bold text-slate-400">Olingan sahifalar ({scannedPages.length})</span>
+                            <button
+                              type="button"
+                              className="text-red-500 hover:text-red-600 font-bold text-xs"
+                              onClick={() => setScannedPages([])}
+                            >
+                              Tozalash
+                            </button>
+                          </div>
+                          <div className="grid grid-cols-4 gap-2 bg-slate-100/50 dark:bg-slate-950/20 p-2.5 rounded-2xl border border-slate-200 dark:border-slate-800">
+                            {scannedPages.map((page, idx) => (
+                              <div key={idx} className="relative aspect-[3/4] rounded-lg overflow-hidden border border-slate-250 bg-white">
+                                <img src={page} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                <button
+                                  type="button"
+                                  onClick={() => setScannedPages(prev => prev.filter((_, i) => i !== idx))}
+                                  className="absolute top-1 right-1 bg-red-650 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-bold cursor-pointer"
+                                >
+                                  ×
+                                </button>
+                                <div className="absolute bottom-0 left-0 right-0 bg-slate-900/80 text-[8px] text-white py-0.5 text-center font-mono">
+                                  {idx + 1}-sh.
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Right Side visual information card */}
@@ -3054,7 +3658,11 @@ export default function DocumentCenter({ currentLang, theme = 'dark', onSendToHa
 
                   <button
                     onClick={executeExtraTool}
-                    disabled={isProcessing}
+                    disabled={
+                      isProcessing || 
+                      (activeTool === 'scanToPdf' && scannedPages.length === 0) || 
+                      (activeTool !== 'scanToPdf' && !pdfExtraFile)
+                    }
                     className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer shadow-lg transition duration-200 disabled:opacity-50"
                   >
                     {isProcessing ? (

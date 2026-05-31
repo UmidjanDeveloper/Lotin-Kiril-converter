@@ -8,7 +8,6 @@ import { UI_TRANSLATIONS, Language } from './utils/translations';
 import LanguageCenter from './components/LanguageCenter';
 import DocumentCenter from './components/DocumentCenter';
 import AiCenter from './components/AiCenter';
-import OcrCenter from './components/OcrCenter';
 import PricingSection from './components/PricingSection';
 import Logo from './components/Logo';
 import OpenSourceLabs from './components/OpenSourceLabs';
@@ -33,7 +32,7 @@ export default function App() {
   });
 
   // Routing navigation tab
-  const [activeTab, setActiveTab] = useState<'home' | 'lang' | 'docs' | 'ai' | 'ocr' | 'prices' | 'opensource'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'lang' | 'docs' | 'ai' | 'prices' | 'opensource'>('home');
 
   // Shared Yash Lamba Handwrite integration state
   const [sharedHandwriteText, setSharedHandwriteText] = useState<string>('');
@@ -194,8 +193,8 @@ export default function App() {
                 { id: 'lang', label: t.langCenter },
                 { id: 'docs', label: t.docCenter },
                 { id: 'ai', label: t.aiCenter },
-                { id: 'ocr', label: 'OCR' },
-                { id: 'opensource', label: currentLang === 'uz' ? 'OS Labs' : currentLang === 'ru' ? 'OS Лаборатория' : 'OS Labs' }
+                { id: 'opensource', label: currentLang === 'uz' ? "Qo'lyozma" : currentLang === 'ru' ? "Почерк" : "Handwrite" },
+                { id: 'prices', label: t.pricing }
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -281,25 +280,6 @@ export default function App() {
               }`}>
                 {t.appPositioning}
               </p>
-
-              {/* Trust badges row */}
-              <div className="flex flex-wrap items-center justify-center gap-3 pt-3 text-xs font-bold font-mono">
-                <span className={`flex items-center gap-1.5 px-4 py-2 border rounded-xl shadow-sm ${
-                  theme === 'dark' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                }`}>
-                  ✓ {t.badgeFree}
-                </span>
-                <span className={`flex items-center gap-1.5 px-4 py-2 border rounded-xl shadow-sm ${
-                  theme === 'dark' ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' : 'bg-indigo-50 text-indigo-700 border-indigo-200'
-                }`}>
-                  ✓ {t.badgePrivate}
-                </span>
-                <span className={`flex items-center gap-1.5 px-4 py-2 border rounded-xl shadow-sm ${
-                  theme === 'dark' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' : 'bg-purple-50 text-purple-700 border-purple-200'
-                }`}>
-                  ✓ {t.badgeNoReg}
-                </span>
-              </div>
             </div>
 
             {/* Main 4 Centers Navigation tiles - EXTREMELY BEAUTIFUL iLovePDF STYLE BENTO GRID */}
@@ -396,7 +376,7 @@ export default function App() {
                   </p>
                   
                   <div className={`mt-5 pt-4 border-t flex items-center justify-between text-xs font-bold ${
-                    theme === 'dark' ? 'border-slate-800/80 text-emerald-400' : 'border-slate-100 text-emerald-600'
+                    theme === 'dark' ? 'border-slate-800/80 text-emerald-400' : 'border-slate-100 text-indigo-600'
                   }`}>
                     <span className="group-hover:translate-x-1 transition duration-200">{t.bentoDocAction}</span>
                     <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition duration-300" />
@@ -450,64 +430,16 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Tile 4: OCR SCANNER */}
-                <div 
-                  onClick={() => setActiveTab('ocr')}
-                  className={`p-6.5 rounded-3xl border transition-all duration-350 cursor-pointer shadow-sm relative group overflow-hidden ${
-                    theme === 'dark' 
-                      ? 'bg-slate-900/50 border-slate-800/80 hover:border-sky-500/50 hover:bg-slate-900/90 hover:shadow-sky-950/30' 
-                      : 'bg-white border-slate-200/80 hover:border-sky-500 hover:shadow-[0_20px_40px_-15px_rgba(15,23,42,0.06)]'
-                  }`}
-                >
-                  <div className="absolute top-0 right-0 w-24 h-24 bg-sky-500/5 rounded-bl-full pointer-events-none group-hover:bg-sky-500/10 transition-colors" />
-                  
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="p-3 bg-sky-500/10 text-sky-600 dark:text-sky-400 rounded-2xl border border-sky-500/15">
-                      <Bot className="w-6 h-6 group-hover:scale-110 transition duration-300" />
-                    </div>
-                    <span className={`text-[9px] font-black tracking-widest uppercase px-2.5 py-1 rounded-md border ${
-                      theme === 'dark' ? 'bg-sky-950/40 text-sky-450 border-sky-500/20' : 'bg-sky-50 text-sky-700 border-sky-100'
-                    }`}>
-                      {t.ocrCenter}
-                    </span>
-                  </div>
-                  
-                  <div>
-                    <h3 className={`text-lg font-bold font-display group-hover:text-sky-600 dark:group-hover:text-sky-300 transition duration-200 ${
-                      theme === 'dark' ? 'text-white' : 'text-slate-900'
-                    }`}>
-                      {t.ocrCenter}
-                    </h3>
-                    <p className={`text-[11px] font-mono mt-0.5 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500 font-semibold'}`}>
-                      {t.bentoOcrSub}
-                    </p>
-                  </div>
-                  
-                  <p className={`text-xs mt-4 leading-relaxed ${
-                    theme === 'dark' ? 'text-slate-400' : 'text-slate-600 font-medium'
-                  }`}>
-                    {t.bentoOcrDesc}
-                  </p>
-                  
-                  <div className={`mt-5 pt-4 border-t flex items-center justify-between text-xs font-bold ${
-                    theme === 'dark' ? 'border-slate-800/80 text-sky-400' : 'border-slate-100 text-sky-600'
-                  }`}>
-                    <span className="group-hover:translate-x-1 transition duration-200">{t.bentoOcrAction}</span>
-                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition duration-300" />
-                  </div>
-                </div>
-
-                {/* Tile 5: OPEN SOURCE LABS */}
+                {/* Tile 5: HANDWRITING STUDIO */}
                 <div 
                   onClick={() => setActiveTab('opensource')}
-                  className={`p-6.5 rounded-3xl border transition-all duration-350 cursor-pointer shadow-sm relative group overflow-hidden md:col-span-2 ${
+                  className={`p-6.5 rounded-3xl border transition-all duration-350 cursor-pointer shadow-sm relative group overflow-hidden ${
                     theme === 'dark' 
-                      ? 'bg-gradient-to-r from-indigo-950/25 via-slate-900/60 to-purple-950/25 border-indigo-500/30 hover:border-indigo-500 hover:shadow-indigo-950/40 animate-pulseBorder' 
-                      : 'bg-gradient-to-r from-indigo-50 via-white to-purple-50 border-indigo-200 hover:border-indigo-500 hover:shadow-[0_20px_40px_-15px_rgba(15,23,42,0.06)]'
+                      ? 'bg-slate-900/50 border-slate-800/80 hover:border-indigo-500/50 hover:bg-slate-900/90 hover:shadow-indigo-950/30' 
+                      : 'bg-white border-slate-200/80 hover:border-indigo-500 hover:shadow-[0_20px_40px_-15px_rgba(15,23,42,0.06)]'
                   }`}
-                  style={{ animation: 'pulseBorder 6s infinite' }}
                 >
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-bl-full pointer-events-none group-hover:bg-indigo-500/15 transition-colors" />
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/5 rounded-bl-full pointer-events-none group-hover:bg-indigo-500/10 transition-colors" />
                   
                   <div className="flex items-center justify-between mb-4">
                     <div className="p-3 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-2xl border border-indigo-500/15">
@@ -516,34 +448,34 @@ export default function App() {
                     <span className={`text-[9px] font-black tracking-widest uppercase px-2.5 py-1 rounded-md border ${
                       theme === 'dark' ? 'bg-indigo-950/40 text-indigo-400 border-indigo-500/20' : 'bg-indigo-50 text-indigo-700 border-indigo-100'
                     }`}>
-                      OPENSOURCE EXPERIMENTAL LABS
+                      {currentLang === 'uz' ? "QO'LYOZMA STUDIYASI" : currentLang === 'ru' ? "СТУДИЯ ПОЧЕРКА" : "HANDWRITING STUDIO"}
                     </span>
                   </div>
                   
                   <div>
-                    <h3 className={`text-xl font-bold font-display group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition duration-200 ${
+                    <h3 className={`text-lg font-bold font-display group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition duration-200 ${
                       theme === 'dark' ? 'text-white' : 'text-slate-900'
                     }`}>
-                      {currentLang === 'uz' ? "OpenSource Laboratoriyasi (3-in-1)" : currentLang === 'ru' ? "OS Лаборатория" : "OpenSource Labs"}
+                      {currentLang === 'uz' ? "Qo'lyozma Studiyasi" : currentLang === 'ru' ? "Студия Почерка" : "Handwriting Studio"}
                     </h3>
-                    <p className={`text-xs font-mono mt-0.5 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-550 font-semibold'}`}>
-                      {currentLang === 'uz' ? "microsoft/markitdown + yashlamba/handwrite + Offline Local AI" : "Мощные инструменты преобразования документов в Markdown и рукописный текст"}
+                    <p className={`text-[11px] font-mono mt-0.5 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-555 font-semibold'}`}>
+                      {currentLang === 'uz' ? "Matnlarni qo'lyozmaga o'tkazish" : currentLang === 'ru' ? "Перевод текста в реалистичный почерк" : "Transform text into beautiful handwriting"}
                     </p>
                   </div>
                   
-                  <p className={`text-xs mt-4 leading-relaxed max-w-3xl ${
+                  <p className={`text-xs mt-4 leading-relaxed ${
                     theme === 'dark' ? 'text-slate-400' : 'text-slate-650 font-medium'
                   }`}>
                     {currentLang === 'uz' 
-                      ? "Istalgan faylni markdown formatiga o'tkazish, kiritilgan matnlarni chiroyli haqiqiy maktab daftari chiziqlarida sozlangan insoniy qo'lyozmaga aylantirish (PDF/PNG eksporti bilan) hamda to'liq internettsiz (off-grid) xavfsiz mantiqiy AI agent bilan ishlash."
-                      : "Конвертируйте файлы в markdown, генерируйте красивый рукописный почерк с симуляцией тетрадей и пишите запросы автономному ИИ, работающему полностью в браузере."}
+                      ? "Kiritilgan matnlarni yoki Word (.docx), PDF, .txt hujjatlarini chiroyli maktab daftari chiziqlarida, katakli varaqda yoki sariq bloknotda sozlangan qo'lyozmaga aylantiring (PDF/PNG formatda yuklab olish bilan)."
+                      : "Конвертируйте набранный текст или импортированные файлы Word, PDF и .txt в реалистичный рукописный вид на симуляции тетрадей в линейку, клетку."}
                   </p>
                   
                   <div className={`mt-5 pt-4 border-t flex items-center justify-between text-xs font-bold ${
                     theme === 'dark' ? 'border-slate-800/80 text-indigo-400' : 'border-slate-100 text-indigo-600'
                   }`}>
                     <span className="group-hover:translate-x-1 transition duration-200">
-                      {currentLang === 'uz' ? "Laboratoriyani ishga tushirish" : "Открыть лабораторию"}
+                      {currentLang === 'uz' ? "Studiyani ochish" : currentLang === 'ru' ? "Открыть студию" : "Open Studio"}
                     </span>
                     <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition duration-300" />
                   </div>
@@ -602,14 +534,6 @@ export default function App() {
           />
         )}
 
-        {activeTab === 'ocr' && (
-          <OcrCenter 
-            currentLang={currentLang} 
-            theme={theme} 
-            onSendToHandwriting={sendToHandwriting}
-          />
-        )}
-
         {activeTab === 'prices' && (
           <PricingSection 
             currentLang={currentLang} 
@@ -658,13 +582,12 @@ export default function App() {
         theme === 'dark' ? 'border-slate-800 bg-slate-950/45 text-slate-500' : 'border-slate-200/80 bg-white text-slate-600'
       }`}>
         <div className="max-w-6xl mx-auto px-4 space-y-4">
-          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 font-bold text-slate-500 dark:text-slate-400">
+          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 font-bold text-slate-500 dark:text-slate-400 font-mono">
             <button onClick={() => setActiveTab('home')} className="hover:text-indigo-500 transition cursor-pointer">{t.homeTab}</button>
             <button onClick={() => setActiveTab('lang')} className="hover:text-indigo-500 transition cursor-pointer">{t.langCenter}</button>
             <button onClick={() => setActiveTab('docs')} className="hover:text-indigo-500 transition cursor-pointer">{t.docCenter}</button>
             <button onClick={() => setActiveTab('ai')} className="hover:text-indigo-500 transition cursor-pointer">{t.aiCenter}</button>
-            <button onClick={() => setActiveTab('ocr')} className="hover:text-indigo-500 transition cursor-pointer">{t.ocrCenter}</button>
-            <button onClick={() => setActiveTab('opensource')} className="hover:text-indigo-500 transition cursor-pointer">{currentLang === 'uz' ? 'OS Labs' : currentLang === 'ru' ? 'OS Лаборатория' : 'OS Labs'}</button>
+            <button onClick={() => setActiveTab('opensource')} className="hover:text-indigo-500 transition cursor-pointer">{currentLang === 'uz' ? "Qo'lyozma" : currentLang === 'ru' ? "Почерк" : "Handwrite"}</button>
             <button onClick={() => setActiveTab('prices')} className="hover:text-indigo-500 transition cursor-pointer">{t.pricing}</button>
           </div>
           <div className="space-y-1">
