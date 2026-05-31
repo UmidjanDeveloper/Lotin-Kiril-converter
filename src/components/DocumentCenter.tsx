@@ -13,6 +13,7 @@ import { FileText, Plus, ChevronRight, Lock, EyeOff, RotateCw, Image, Landmark, 
 interface DocumentCenterProps {
   currentLang: Language;
   theme?: 'light' | 'dark';
+  onSendToHandwriting?: (text: string) => void;
 }
 
 interface PdfTool {
@@ -26,7 +27,7 @@ interface PdfTool {
   category: string;
 }
 
-export default function DocumentCenter({ currentLang, theme = 'dark' }: DocumentCenterProps) {
+export default function DocumentCenter({ currentLang, theme = 'dark', onSendToHandwriting }: DocumentCenterProps) {
   const t = UI_TRANSLATIONS[currentLang];
   const [subTab, setSubTab] = useState<'templates' | 'pdf'>('templates');
   const [activeTool, setActiveTool] = useState<string | null>(null);
@@ -259,7 +260,8 @@ export default function DocumentCenter({ currentLang, theme = 'dark' }: Document
       });
 
       if (!res.ok) {
-        throw new Error('AI Server call failed');
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'AI Server call failed');
       }
 
       const data = await res.json();
@@ -269,9 +271,9 @@ export default function DocumentCenter({ currentLang, theme = 'dark' }: Document
       } else {
         setGeneratedDocText(getLocalDraftText(selectedTemplate, docTo, docFrom, docDetail));
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setErrorMessage("Gemini AI bilan ulanib bo'lmadi. Offline shablon shakllantirildi.");
+      setErrorMessage(err.message || "Gemini AI bilan ulanib bo'lmadi. Offline shablon shakllantirildi.");
       setGeneratedDocText(getLocalDraftText(selectedTemplate, docTo, docFrom, docDetail));
     } finally {
       setIsGeneratingDocText(false);
@@ -1620,6 +1622,15 @@ export default function DocumentCenter({ currentLang, theme = 'dark' }: Document
               >
                 🖨️ Chop etish / PDF saqlash
               </button>
+
+              {generatedDocText && onSendToHandwriting && (
+                <button
+                  onClick={() => onSendToHandwriting(generatedDocText)}
+                  className="px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow bg-gradient-to-r from-indigo-650 to-indigo-750 text-white active:scale-95 transition flex items-center gap-1"
+                >
+                  ✍️ {currentLang === 'uz' ? "Qo'lyozma Studiyasiga jo'natish" : currentLang === 'ru' ? "Передать в студию почерка" : "Send to Handwriting Studio"}
+                </button>
+              )}
             </div>
 
             {/* A4 Sandbox Core Visual Canvas */}

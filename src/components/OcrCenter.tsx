@@ -12,9 +12,10 @@ import { Camera, Image as ImageIcon, Sparkles, FileText, Globe, ArrowRight, Down
 interface OcrCenterProps {
   currentLang: Language;
   theme?: 'light' | 'dark';
+  onSendToHandwriting?: (text: string) => void;
 }
 
-export default function OcrCenter({ currentLang, theme = 'dark' }: OcrCenterProps) {
+export default function OcrCenter({ currentLang, theme = 'dark', onSendToHandwriting }: OcrCenterProps) {
   const t = UI_TRANSLATIONS[currentLang];
   const [selectedImg, setSelectedImg] = useState<string | null>(null);
   const [imgBase64, setImgBase64] = useState<string | null>(null);
@@ -71,7 +72,7 @@ export default function OcrCenter({ currentLang, theme = 'dark' }: OcrCenterProp
       console.error("OCR Error:", err);
       setOcrStatus('error');
       setOcrProgress(null);
-      setOcrText("Tasvirdagi matnni aniqlash xizmati vaqtincha ishlamayapti. Iltimos, API kalitingiz va tarmoq ulanishingiz to'g'riligini tekshiring hamda birozdan keyin qayta urinib ko'ring.");
+      setOcrText(err.message || "Tasvirdagi matnni aniqlash xizmati vaqtincha ishlamayapti. Iltimos, API kalitingiz va tarmoq ulanishingiz to'g'riligini tekshiring hamda birozdan keyin qayta urinib ko'ring.");
     }
   };
 
@@ -105,7 +106,7 @@ export default function OcrCenter({ currentLang, theme = 'dark' }: OcrCenterProp
     } catch (err: any) {
       console.error(err);
       setOcrStatus('error');
-      setOcrText("Tarjima qilish xizmati vaqtincha ishlamayapti. Iltimos, API kalitingizni tekshiring.");
+      setOcrText(err.message || "Tarjima qilish xizmati vaqtincha ishlamayapti. Iltimos, API kalitingizni tekshiring.");
     } finally {
       setOcrProgress(null);
     }
@@ -253,7 +254,7 @@ export default function OcrCenter({ currentLang, theme = 'dark' }: OcrCenterProp
           {ocrText && (
             <div className={`pt-4 border-t mt-4 space-y-3 ${theme === 'dark' ? 'border-slate-805' : 'border-slate-150'}`}>
               <span className="text-[10px] font-mono font-black text-slate-500 uppercase block tracking-wider">MATNNI KEYINGI BOSQICHGA UZATISH:</span>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
                 <button
                   onClick={handleOcrToLatin}
                   className="py-2.5 px-3 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-500 dark:text-indigo-300 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 duration-200 cursor-pointer"
@@ -275,6 +276,14 @@ export default function OcrCenter({ currentLang, theme = 'dark' }: OcrCenterProp
                   <Download className="w-3.5 h-3.5" />
                   {t.ocrSaveWord}
                 </button>
+                {onSendToHandwriting && (
+                  <button
+                    onClick={() => onSendToHandwriting(ocrText)}
+                    className="py-2.5 px-3 bg-gradient-to-r from-purple-600 to-indigo-650 hover:from-purple-700 hover:to-indigo-750 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 duration-200 cursor-pointer shadow active:scale-95"
+                  >
+                    ✍️ {currentLang === 'uz' ? "Qo'lyozmaga o'tkazish" : currentLang === 'ru' ? "Превратить в почерк" : "Convert to Notebook"}
+                  </button>
+                )}
               </div>
             </div>
           )}

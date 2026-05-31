@@ -11,6 +11,7 @@ import AiCenter from './components/AiCenter';
 import OcrCenter from './components/OcrCenter';
 import PricingSection from './components/PricingSection';
 import Logo from './components/Logo';
+import OpenSourceLabs from './components/OpenSourceLabs';
 import { FileText, Type, CheckCircle2, ChevronRight, Zap, RefreshCw, BarChart, Globe2, Sparkles, LayoutGrid, Sun, Moon, Shield, Award, Landmark, HelpCircle, ArrowRight, CornerRightDown, Bot } from 'lucide-react';
 
 export default function App() {
@@ -32,7 +33,15 @@ export default function App() {
   });
 
   // Routing navigation tab
-  const [activeTab, setActiveTab] = useState<'home' | 'lang' | 'docs' | 'ai' | 'ocr' | 'prices'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'lang' | 'docs' | 'ai' | 'ocr' | 'prices' | 'opensource'>('home');
+
+  // Shared Yash Lamba Handwrite integration state
+  const [sharedHandwriteText, setSharedHandwriteText] = useState<string>('');
+
+  const sendToHandwriting = (text: string) => {
+    setSharedHandwriteText(text);
+    setActiveTab('opensource');
+  };
 
   // Stats Counters from original system
   const [filesProcessedCount, setFilesProcessedCount] = useState<number>(() => {
@@ -185,7 +194,8 @@ export default function App() {
                 { id: 'lang', label: t.langCenter },
                 { id: 'docs', label: t.docCenter },
                 { id: 'ai', label: t.aiCenter },
-                { id: 'ocr', label: 'OCR' }
+                { id: 'ocr', label: 'OCR' },
+                { id: 'opensource', label: currentLang === 'uz' ? 'OS Labs' : currentLang === 'ru' ? 'OS Лаборатория' : 'OS Labs' }
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -240,30 +250,6 @@ export default function App() {
 
       {/* Main Container */}
       <main className="max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 space-y-8 relative z-10">
-
-        {/* Global Privacy Safety banner */}
-        <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all duration-350 shadow-sm ${
-          theme === 'dark' 
-            ? 'bg-indigo-950/20 border-indigo-500/20 text-indigo-200/90' 
-            : 'bg-indigo-50/70 border-indigo-100/80 text-indigo-950'
-        }`}>
-          <div className="flex items-center gap-3">
-            <div className={`p-1.5 rounded-lg ${theme === 'dark' ? 'bg-indigo-500/10' : 'bg-indigo-500/10'}`}>
-              <Shield className="w-5 h-5 text-indigo-500 animate-pulse flex-shrink-0" />
-            </div>
-            <p className="text-xs sm:text-sm font-semibold leading-relaxed font-sans">
-              <span className="text-indigo-600 dark:text-indigo-400">{t.badgePrivate}:</span> {t.privacyBanner}
-            </p>
-          </div>
-          <button 
-            onClick={() => setActiveTab('prices')}
-            className={`text-xs font-black uppercase tracking-wider shrink-0 duration-200 hover:underline flex items-center gap-1 ${
-              theme === 'dark' ? 'text-indigo-400' : 'text-indigo-700'
-            }`}
-          >
-            {t.pricingDetails} <ChevronRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
 
         {/* Dynamic routing renderer */}
         {activeTab === 'home' && (
@@ -511,6 +497,58 @@ export default function App() {
                   </div>
                 </div>
 
+                {/* Tile 5: OPEN SOURCE LABS */}
+                <div 
+                  onClick={() => setActiveTab('opensource')}
+                  className={`p-6.5 rounded-3xl border transition-all duration-350 cursor-pointer shadow-sm relative group overflow-hidden md:col-span-2 ${
+                    theme === 'dark' 
+                      ? 'bg-gradient-to-r from-indigo-950/25 via-slate-900/60 to-purple-950/25 border-indigo-500/30 hover:border-indigo-500 hover:shadow-indigo-950/40 animate-pulseBorder' 
+                      : 'bg-gradient-to-r from-indigo-50 via-white to-purple-50 border-indigo-200 hover:border-indigo-500 hover:shadow-[0_20px_40px_-15px_rgba(15,23,42,0.06)]'
+                  }`}
+                  style={{ animation: 'pulseBorder 6s infinite' }}
+                >
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-bl-full pointer-events-none group-hover:bg-indigo-500/15 transition-colors" />
+                  
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="p-3 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-2xl border border-indigo-500/15">
+                      <Sparkles className="w-6 h-6 group-hover:scale-110 transition duration-300" />
+                    </div>
+                    <span className={`text-[9px] font-black tracking-widest uppercase px-2.5 py-1 rounded-md border ${
+                      theme === 'dark' ? 'bg-indigo-950/40 text-indigo-400 border-indigo-500/20' : 'bg-indigo-50 text-indigo-700 border-indigo-100'
+                    }`}>
+                      OPENSOURCE EXPERIMENTAL LABS
+                    </span>
+                  </div>
+                  
+                  <div>
+                    <h3 className={`text-xl font-bold font-display group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition duration-200 ${
+                      theme === 'dark' ? 'text-white' : 'text-slate-900'
+                    }`}>
+                      {currentLang === 'uz' ? "OpenSource Laboratoriyasi (3-in-1)" : currentLang === 'ru' ? "OS Лаборатория" : "OpenSource Labs"}
+                    </h3>
+                    <p className={`text-xs font-mono mt-0.5 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-550 font-semibold'}`}>
+                      {currentLang === 'uz' ? "microsoft/markitdown + yashlamba/handwrite + Offline Local AI" : "Мощные инструменты преобразования документов в Markdown и рукописный текст"}
+                    </p>
+                  </div>
+                  
+                  <p className={`text-xs mt-4 leading-relaxed max-w-3xl ${
+                    theme === 'dark' ? 'text-slate-400' : 'text-slate-650 font-medium'
+                  }`}>
+                    {currentLang === 'uz' 
+                      ? "Istalgan faylni markdown formatiga o'tkazish, kiritilgan matnlarni chiroyli haqiqiy maktab daftari chiziqlarida sozlangan insoniy qo'lyozmaga aylantirish (PDF/PNG eksporti bilan) hamda to'liq internettsiz (off-grid) xavfsiz mantiqiy AI agent bilan ishlash."
+                      : "Конвертируйте файлы в markdown, генерируйте красивый рукописный почерк с симуляцией тетрадей и пишите запросы автономному ИИ, работающему полностью в браузере."}
+                  </p>
+                  
+                  <div className={`mt-5 pt-4 border-t flex items-center justify-between text-xs font-bold ${
+                    theme === 'dark' ? 'border-slate-800/80 text-indigo-400' : 'border-slate-100 text-indigo-600'
+                  }`}>
+                    <span className="group-hover:translate-x-1 transition duration-200">
+                      {currentLang === 'uz' ? "Laboratoriyani ishga tushirish" : "Открыть лабораторию"}
+                    </span>
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition duration-300" />
+                  </div>
+                </div>
+
               </div>
             </div>
 
@@ -544,19 +582,32 @@ export default function App() {
             currentLang={currentLang} 
             theme={theme}
             onFileProcessed={handleFileProcessed} 
+            onSendToHandwriting={sendToHandwriting}
           />
         )}
 
         {activeTab === 'docs' && (
-          <DocumentCenter currentLang={currentLang} theme={theme} />
+          <DocumentCenter 
+            currentLang={currentLang} 
+            theme={theme} 
+            onSendToHandwriting={sendToHandwriting}
+          />
         )}
 
         {activeTab === 'ai' && (
-          <AiCenter currentLang={currentLang} theme={theme} />
+          <AiCenter 
+            currentLang={currentLang} 
+            theme={theme} 
+            onSendToHandwriting={sendToHandwriting}
+          />
         )}
 
         {activeTab === 'ocr' && (
-          <OcrCenter currentLang={currentLang} theme={theme} />
+          <OcrCenter 
+            currentLang={currentLang} 
+            theme={theme} 
+            onSendToHandwriting={sendToHandwriting}
+          />
         )}
 
         {activeTab === 'prices' && (
@@ -567,6 +618,39 @@ export default function App() {
             isPremium={isPremium} 
           />
         )}
+
+        {activeTab === 'opensource' && (
+          <OpenSourceLabs 
+            currentLang={currentLang} 
+            theme={theme} 
+            sharedHandwriteText={sharedHandwriteText}
+            clearSharedHandwriteText={() => setSharedHandwriteText('')}
+          />
+        )}
+
+        {/* Global Privacy Safety banner placed elegantly at the bottom */}
+        <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all duration-350 shadow-sm mt-8 ${
+          theme === 'dark' 
+            ? 'bg-indigo-950/20 border-indigo-500/20 text-indigo-200/90' 
+            : 'bg-indigo-50/70 border-indigo-100/80 text-indigo-950'
+        }`}>
+          <div className="flex items-center gap-3">
+            <div className={`p-1.5 rounded-lg ${theme === 'dark' ? 'bg-indigo-500/10' : 'bg-indigo-500/10'}`}>
+              <Shield className="w-5 h-5 text-indigo-500 animate-pulse flex-shrink-0" />
+            </div>
+            <p className="text-xs sm:text-sm font-semibold leading-relaxed font-sans">
+              <span className="text-indigo-600 dark:text-indigo-400">{t.badgePrivate}:</span> {t.privacyBanner}
+            </p>
+          </div>
+          <button 
+            onClick={() => setActiveTab('prices')}
+            className={`text-xs font-black uppercase tracking-wider shrink-0 duration-200 hover:underline flex items-center gap-1 ${
+              theme === 'dark' ? 'text-indigo-400' : 'text-indigo-700'
+            }`}
+          >
+            {t.pricingDetails} <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </main>
 
       {/* Clean Human-focused footer with translated links and descriptions */}
@@ -580,6 +664,7 @@ export default function App() {
             <button onClick={() => setActiveTab('docs')} className="hover:text-indigo-500 transition cursor-pointer">{t.docCenter}</button>
             <button onClick={() => setActiveTab('ai')} className="hover:text-indigo-500 transition cursor-pointer">{t.aiCenter}</button>
             <button onClick={() => setActiveTab('ocr')} className="hover:text-indigo-500 transition cursor-pointer">{t.ocrCenter}</button>
+            <button onClick={() => setActiveTab('opensource')} className="hover:text-indigo-500 transition cursor-pointer">{currentLang === 'uz' ? 'OS Labs' : currentLang === 'ru' ? 'OS Лаборатория' : 'OS Labs'}</button>
             <button onClick={() => setActiveTab('prices')} className="hover:text-indigo-500 transition cursor-pointer">{t.pricing}</button>
           </div>
           <div className="space-y-1">

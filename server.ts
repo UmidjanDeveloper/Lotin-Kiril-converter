@@ -19,20 +19,64 @@ async function startServer() {
   app.use(express.json({ limit: '25mb' }));
   app.use(express.urlencoded({ limit: '25mb', extended: true }));
 
-  // Initialize Gemini
-  const apiKey = process.env.GEMINI_API_KEY || "AIzaSyBdhZjynoq3RvuX3cU0g6yep_t_7HRkqTE";
-  const ai = new GoogleGenAI({
-    apiKey: apiKey,
-    httpOptions: {
-      headers: {
-        'User-Agent': 'aistudio-build',
-      }
+  // Lazy client getter that safely handles key status
+  const getGeminiClient = () => {
+    let key = process.env.GEMINI_API_KEY || "";
+    key = key.trim();
+    if (
+      !key || 
+      key === "AIzaSyBdhZjynoq3RvuX3cU0g6yep_t_7HRkqTE" || 
+      key === "MY_GEMINI_API_KEY" || 
+      key === "PLACEholder"
+    ) {
+      throw new Error("GEMINI_KEY_MISSING_OR_LEAKED");
     }
-  });
+    return new GoogleGenAI({
+      apiKey: key,
+      httpOptions: {
+        headers: {
+          'User-Agent': 'aistudio-build',
+        }
+      }
+    });
+  };
+
+  const formatGeminiError = (error: any): string => {
+    const errMsg = error?.message || String(error);
+    if (
+      errMsg.includes("leaked") || 
+      errMsg.includes("permission_denied") || 
+      errMsg.includes("PERMISSION_DENIED") ||
+      errMsg.includes("Key not found") || 
+      errMsg.includes("API key") ||
+      errMsg.includes("API_KEY") ||
+      errMsg.includes("GEMINI_KEY_MISSING_OR_LEAKED")
+    ) {
+      return "DIQQAT: GEMINI_API_KEY o'rnatilmagan yoki eskirgan (leaked). Tizim to'laqonli ishlashi uchun iltimos, AI Studio platformasining Sozlamalar (Settings/Secrets) bo'limida o'zingizning shaxsiy GEMINI_API_KEY kalitingizni kiriting. Tizim sozlanguniga qadar, 'OS Labs' bo'limidagi offline mantiqiy yordamchidan foydalanib turishingiz mumkin.";
+    }
+    return error?.message || "Tizimli xatolik yuz berdi. Iltimos birozdan keyin qayta urinib ko'ring.";
+  };
+
+  // Express middleware to ensure the key exists and attach a lazy GoogleGenAI client
+  const geminiGuard = (req: any, res: any, next: any) => {
+    try {
+      req.ai = getGeminiClient();
+      next();
+    } catch (err) {
+      console.warn("Gemini Guard triggered: API key is empty, placeholder or reported leaked.");
+      return res.status(403).json({ 
+        error: "DIQQAT: GEMINI_API_KEY o'rnatilmagan yoki eskirgan (leaked). Tizim to'laqonli ishlashi uchun iltimos, AI Studio platformasining Sozlamalar (Settings/Secrets) bo'limida o'zingizning shaxsiy GEMINI_API_KEY kalitingizni kiriting. Tizim sozlanguniga qadar, 'OS Labs' bo'limidagi offline mantiqiy yordamchidan foydalanib turishingiz mumkin." 
+      });
+    }
+  };
+
+  // Apply the Gemini guard automatically to all /api/gemini routes
+  app.use("/api/gemini", geminiGuard);
 
   // API Route for Translation
   app.post("/api/gemini/translate", async (req, res) => {
     try {
+      const ai = (req as any).ai;
       const { text, sourceLang, targetLang } = req.body;
       if (!text || !text.trim()) {
         return res.status(400).json({ error: "Matn kiritilmadi" });
@@ -54,13 +98,14 @@ Tarjima qilinadigan matn:
       res.json({ output: response.text });
     } catch (error: any) {
       console.error("Translate Error:", error);
-      res.status(500).json({ error: "Tarjima xizmati vaqtincha ishlamayapti, iltimos birozdan keyin qayta urinib ko'ring." });
+      res.status(500).json({ error: formatGeminiError(error) });
     }
   });
 
   // API Route for Text Polish / Styling
   app.post("/api/gemini/polish", async (req, res) => {
     try {
+      const ai = (req as any).ai;
       const { text, style } = req.body;
       if (!text || !text.trim()) {
         return res.status(400).json({ error: "Matn kiritilmadi" });
@@ -92,13 +137,14 @@ Matn:
       res.json({ output: response.text });
     } catch (error: any) {
       console.error("Polish Error:", error);
-      res.status(500).json({ error: "Matnni sayqallash xizmati vaqtincha ishlamayapti, iltimos birozdan keyin qayta urinib ko'ring." });
+      res.status(500).json({ error: formatGeminiError(error) });
     }
   });
 
   // API Route for Image OCR (Optical Character Recognition)
   app.post("/api/gemini/ocr", async (req, res) => {
     try {
+      const ai = (req as any).ai;
       const { image } = req.body;
       if (!image) {
         return res.status(400).json({ error: "Rasm ma'lumotlari yuborilmadi" });
@@ -134,13 +180,14 @@ Hech qanday qo'shimcha tsentzura, sarlavha, kirish gaplari yoki tushuntirishlar 
       res.json({ output: response.text });
     } catch (error: any) {
       console.error("OCR Error:", error);
-      res.status(500).json({ error: "OCR tasvirlarni aniqlash xizmati vaqtincha ishlamayapti, birozdan keyin qayta urinib ko'ring." });
+      res.status(500).json({ error: formatGeminiError(error) });
     }
   });
 
   // API Route for Summarization
   app.post("/api/gemini/summarize", async (req, res) => {
     try {
+      const ai = (req as any).ai;
       const { text, lang } = req.body;
       if (!text || !text.trim()) {
         return res.status(400).json({ error: "Text is required" });
@@ -159,13 +206,14 @@ ${text}`;
       res.json({ output: response.text });
     } catch (error: any) {
       console.error("Summarize Error:", error);
-      res.status(500).json({ error: error?.message || "Internal Server Error" });
+      res.status(500).json({ error: formatGeminiError(error) });
     }
   });
 
   // API Route for Document Templates Generation
   app.post("/api/gemini/document", async (req, res) => {
     try {
+      const ai = (req as any).ai;
       const { templateType, to, from, detail } = req.body;
       
       let typeLabel = "";
@@ -204,13 +252,14 @@ Yo'riqnomalar:
       res.json({ output: response.text || "" });
     } catch (error: any) {
       console.error("Document Template Error:", error);
-      res.status(500).json({ error: "Hujjat shablonini generatsiya qilish xizmata vaqtincha ishlamayapti, iltimos birozdan keyin qayta urinib ko'ring." });
+      res.status(500).json({ error: formatGeminiError(error) });
     }
   });
 
   // API Route for Q&A Chat
   app.post("/api/gemini/chat", async (req, res) => {
     try {
+      const ai = (req as any).ai;
       const { messages, query, lang } = req.body;
       if (!query || !query.trim()) {
         return res.status(400).json({ error: "Query is required" });
@@ -236,7 +285,7 @@ Yo'riqnomalar:
       res.json({ text: response.text });
     } catch (error: any) {
       console.error("Chat Error:", error);
-      res.status(500).json({ error: error?.message || "Internal Server Error" });
+      res.status(500).json({ error: formatGeminiError(error) });
     }
   });
 

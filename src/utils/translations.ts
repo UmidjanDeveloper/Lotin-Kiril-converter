@@ -20,7 +20,7 @@ export const UI_TRANSLATIONS: Record<Language, Record<string, string>> = {
     pricing: "Narxlar",
     
     // Core trust badges
-    badgeFree: "100% Bepul",
+    badgeFree: "Standart Plan",
     badgePrivate: "Maxfiy va Ishonchli",
     badgeNoReg: "Ro'yxatdan o'tmasdan",
     
@@ -158,9 +158,9 @@ export const UI_TRANSLATIONS: Record<Language, Record<string, string>> = {
 
     // Pricing
     pricingTitle: "Tariflar",
-    pricingDesc: "Hujjat.uz bacha uchun doimo ishonchli va bepul bo'lib qoladi. Premium barcha AI limitlarini mukammallashtiradi.",
-    planFreeName: "Ishonchli va Bepul",
-    planFreePrice: "$0 / umrbod",
+    pricingDesc: "Hujjat.uz doimo ishonchli ravishda yordam beradi. Premium barcha AI limitlarini mukammallashtiradi.",
+    planFreeName: "Standart Plan",
+    planFreePrice: "Asosiy kirish",
     planFreeFeature1: "Cheksiz Kirill <-> Lotin o'girish",
     planFreeFeature2: "Barcha ishonchli PDF asboblari",
     planFreeFeature3: "100% maxfiylik kafolati",
@@ -168,7 +168,7 @@ export const UI_TRANSLATIONS: Record<Language, Record<string, string>> = {
     
     planPremiumName: "Premium Biznes Pro",
     planPremiumPrice: "50,000 UZS / oy",
-    planPremiumFeature1: "Barcha bepul imkoniyatlar",
+    planPremiumFeature1: "Barcha asosiy imkoniyatlar",
     planPremiumFeature2: "Cheksiz AI va hujjatlar tahlili",
     planPremiumFeature3: "Tezkor va ustuvor OCR o'qish",
     planPremiumFeature4: "Premium shablonlar va jamoaviy tahrir",
@@ -179,7 +179,7 @@ export const UI_TRANSLATIONS: Record<Language, Record<string, string>> = {
     // Home Screen specific details
     homeTab: "Bosh sahifa",
     pricingDetails: "Tariflar xarakteristikasi",
-    heroSub: "Dunyodagi eng mukammal O'zbek tili super-platformasi",
+    heroSub: "O'zbek tili va hujjatlar platformasi",
     heroTitle: "O'zbekcha Hujjat va Matnlar Bilan Yangi Avlod Texnologiya Tizimi",
     chooseService: "XIZMATLARNI TANLANG",
     statsFiles: "Fayllar statistikasi",
@@ -217,7 +217,7 @@ export const UI_TRANSLATIONS: Record<Language, Record<string, string>> = {
     ocrCenter: "OCR Сканер изображений",
     pricing: "Тарифы",
     
-    badgeFree: "100% Бесплатно",
+    badgeFree: "Стандартный План",
     badgePrivate: "Секретно и Надежно",
     badgeNoReg: "Без Регистрации",
     
@@ -350,9 +350,9 @@ export const UI_TRANSLATIONS: Record<Language, Record<string, string>> = {
     ocrProgress: "Анализ изображения: ",
 
     pricingTitle: "Тарифы",
-    pricingDesc: "Hujjat.uz всегда останется надежным и бесплатным для всех. Премиум снимает все ограничения на ИИ под капотом.",
-    planFreeName: "Надежный бесплатный",
-    planFreePrice: "$0 / навсегда",
+    pricingDesc: "Hujjat.uz всегда останется надежным сервисом для всех. Премиум снимает все ограничения на ИИ под капотом.",
+    planFreeName: "Стандартный План",
+    planFreePrice: "Базовый доступ",
     planFreeFeature1: "Безлимитный перевод Кириллица <-> Латиница",
     planFreeFeature2: "Все надежные инструменты PDF",
     planFreeFeature3: "100% гарантия приватности данных",
@@ -360,7 +360,7 @@ export const UI_TRANSLATIONS: Record<Language, Record<string, string>> = {
     
     planPremiumName: "Премиум Бизнес Про",
     planPremiumPrice: "50,000 UZS / мес",
-    planPremiumFeature1: "Все бесплатные возможности",
+    planPremiumFeature1: "Все базовые возможности",
     planPremiumFeature2: "Безлимитный ИИ и подробный анализ файлов",
     planPremiumFeature3: "Приоритетное OCR распознавание фото",
     planPremiumFeature4: "Бизнес шаблоны документов и экспорт в PDF",
@@ -371,7 +371,7 @@ export const UI_TRANSLATIONS: Record<Language, Record<string, string>> = {
     // Home Screen specific details
     homeTab: "Главная",
     pricingDetails: "Характеристики тарифов",
-    heroSub: "Самая совершенная суперплатформа для узбекского языка в мире",
+    heroSub: "Платформа для работы с узбекским языком и документами",
     heroTitle: "Система Нового Поколения Для Текстов и Документов на Узбекском Языке",
     chooseService: "ВЫБЕРИТЕ УСЛУГУ",
     statsFiles: "Статистика файлов",
@@ -409,7 +409,7 @@ export const UI_TRANSLATIONS: Record<Language, Record<string, string>> = {
     ocrCenter: "OCR Image Scanner",
     pricing: "Pricing",
     
-    badgeFree: "100% Free",
+    badgeFree: "Standard Plan",
     badgePrivate: "Private & Reliable",
     badgeNoReg: "No Registration",
     
@@ -542,9 +542,9 @@ export const UI_TRANSLATIONS: Record<Language, Record<string, string>> = {
     ocrProgress: "Analyzing image: ",
 
     pricingTitle: "Pricing",
-    pricingDesc: "Hujjat.uz is dedicated to staying reliable and free for everyone. Premium unlock unlimited sub-features.",
-    planFreeName: "Reliable Free",
-    planFreePrice: "$0 / lifetime",
+    pricingDesc: "Hujjat.uz is dedicated to staying reliable for everyone. Premium unlock unlimited sub-features.",
+    planFreeName: "Standard Plan",
+    planFreePrice: "Basic access",
     planFreeFeature1: "Unlimited script translation (Cyrillic <-> Latin)",
     planFreeFeature2: "Access all reliable client-side PDF utilities",
     planFreeFeature3: "100% secure client-side storage guarantees",
@@ -552,7 +552,7 @@ export const UI_TRANSLATIONS: Record<Language, Record<string, string>> = {
     
     planPremiumName: "Premium Business Pro",
     planPremiumPrice: "50,000 UZS / mo",
-    planPremiumFeature1: "All Free features included",
+    planPremiumFeature1: "All standard features included",
     planPremiumFeature2: "Unlimited AI interactions and file queries",
     planPremiumFeature3: "Ultra-fast and precise cloud-assisted OCR",
     planPremiumFeature4: "Export professional premium legal templates",
@@ -563,7 +563,7 @@ export const UI_TRANSLATIONS: Record<Language, Record<string, string>> = {
     // Home Screen specific details
     homeTab: "Home",
     pricingDetails: "Plan Specifications",
-    heroSub: "The World's Most Advanced Uzbek Language Super-Platform",
+    heroSub: "Uzbek language and document utility platform",
     heroTitle: "Next-Gen Document & Text Technology For Uzbek Language",
     chooseService: "CHOOSE A SERVICE",
     statsFiles: "File Statistics",

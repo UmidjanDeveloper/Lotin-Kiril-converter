@@ -14,9 +14,10 @@ interface LanguageCenterProps {
   currentLang: Language;
   onFileProcessed: (charCount: number) => void;
   theme?: 'light' | 'dark';
+  onSendToHandwriting?: (text: string) => void;
 }
 
-export default function LanguageCenter({ currentLang, onFileProcessed, theme = 'dark' }: LanguageCenterProps) {
+export default function LanguageCenter({ currentLang, onFileProcessed, theme = 'dark', onSendToHandwriting }: LanguageCenterProps) {
   const [subTab, setSubTab] = useState<'text' | 'files' | 'translate' | 'polish'>('text');
   const t = UI_TRANSLATIONS[currentLang];
 
@@ -147,7 +148,7 @@ export default function LanguageCenter({ currentLang, onFileProcessed, theme = '
       setTransOutput(data.output || "");
     } catch (err: any) {
       console.error("Tarjima xatosi:", err);
-      setTransOutput("Tarjima vaqtincha ishlamayapti, iltimos birozdan keyin qayta urinib ko'ring.");
+      setTransOutput(err.message || "Tarjima vaqtincha ishlamayapti, iltimos birozdan keyin qayta urinib ko'ring.");
     } finally {
       setIsTranslating(false);
     }
@@ -189,7 +190,7 @@ export default function LanguageCenter({ currentLang, onFileProcessed, theme = '
       setPolishOutput(`${heading}${data.output || ""}`);
     } catch (err: any) {
       console.error("Uslub tahrirlash xatosi:", err);
-      setPolishOutput("Matnni sayqallash vaqtincha ishlamayapti, iltimos birozdan keyin qayta urinib ko'ring.");
+      setPolishOutput(err.message || "Matnni sayqallash vaqtincha ishlamayapti, iltimos birozdan keyin qayta urinib ko'ring.");
     } finally {
       setIsPolishing(false);
     }
@@ -429,6 +430,14 @@ export default function LanguageCenter({ currentLang, onFileProcessed, theme = '
                       >
                         {transCopied ? t.copied : t.copy}
                       </button>
+                      {onSendToHandwriting && (
+                        <button
+                          onClick={() => onSendToHandwriting(transOutput)}
+                          className="p-1.5 px-3 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer bg-gradient-to-r from-purple-600 to-indigo-650 text-white shadow active:scale-95 duration-100"
+                        >
+                          ✍️ {currentLang === 'uz' ? "Qo'lyozmaga o'tish" : currentLang === 'ru' ? "Версия почерком" : "Handwrite draft"}
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -548,19 +557,29 @@ export default function LanguageCenter({ currentLang, onFileProcessed, theme = '
                   }`}>
                     {t.outputLabel}
                   </span>
-                  {polishOutput && (
-                    <button
-                      onClick={() => copyToClipboard(polishOutput, 'polish')}
-                      className={`p-1.5 px-3 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
-                        polishCopied
-                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                          : theme === 'dark'
-                            ? 'text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/10'
-                            : 'text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 shadow-sm'
-                      }`}
-                    >
-                      {polishCopied ? t.copied : t.copy}
-                    </button>
+                   {polishOutput && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => copyToClipboard(polishOutput, 'polish')}
+                        className={`p-1.5 px-3 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
+                          polishCopied
+                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                            : theme === 'dark'
+                              ? 'text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/10'
+                              : 'text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 shadow-sm'
+                        }`}
+                      >
+                        {polishCopied ? t.copied : t.copy}
+                      </button>
+                      {onSendToHandwriting && (
+                        <button
+                          onClick={() => onSendToHandwriting(polishOutput)}
+                          className="p-1.5 px-3 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer bg-gradient-to-r from-purple-600 to-indigo-650 text-white shadow active:scale-95 duration-100"
+                        >
+                          ✍️ {currentLang === 'uz' ? "Qo'lyozmaga o'tish" : currentLang === 'ru' ? "Версия почерком" : "Handwrite draft"}
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
                 <div className={`flex-1 overflow-y-auto text-base leading-relaxed whitespace-pre-wrap select-text ${

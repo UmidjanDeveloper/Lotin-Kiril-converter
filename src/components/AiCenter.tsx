@@ -10,9 +10,10 @@ import { Bot, Send, RefreshCw, AlertCircle, X, FileText, FileUp, Sparkles } from
 interface AiCenterProps {
   currentLang: Language;
   theme?: 'light' | 'dark';
+  onSendToHandwriting?: (text: string) => void;
 }
 
-export default function AiCenter({ currentLang, theme = 'dark' }: AiCenterProps) {
+export default function AiCenter({ currentLang, theme = 'dark', onSendToHandwriting }: AiCenterProps) {
   const t = UI_TRANSLATIONS[currentLang];
   const [subTab, setSubTab] = useState<'chat' | 'summarize'>('chat');
 
@@ -67,14 +68,23 @@ export default function AiCenter({ currentLang, theme = 'dark' }: AiCenterProps)
         body: JSON.stringify({ text: sumText, lang: currentLang === 'uz' ? 'uz' : 'ru' }),
       });
       if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || "Tahlil xizmati muvaffaqiyatsiz tugadi");
+        let errMsg = "";
+        try {
+          const errData = await res.json();
+          errMsg = errData.error || errData.message;
+        } catch {
+          try {
+            const txt = await res.text();
+            errMsg = txt.slice(0, 160);
+          } catch {}
+        }
+        throw new Error(errMsg || "Tahlil xizmati muvaffaqiyatsiz tugadi");
       }
       const data = await res.json();
       setSumOutput(data.output || "Natija kutilmagan formatda qaytdi.");
     } catch (err: any) {
       console.error("Gemini summarization failed:", err);
-      setSumOutput("Konspektlashtirish xizmati vaqtincha ishlamayapti. Iltimos, API kalitingiz to'g'riligini tekshiring va birozdan keyin qayta urinib ko'ring.");
+      setSumOutput(err.message || "Konspektlashtirish xizmati vaqtincha ishlamayapti. Iltimos, API kalitingiz to'g'riligini tekshiring va birozdan keyin qayta urinib ko'ring.");
     } finally {
       setIsSummarizing(false);
     }
@@ -106,14 +116,23 @@ export default function AiCenter({ currentLang, theme = 'dark' }: AiCenterProps)
         }),
       });
       if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || "Savolga javob berish muvaffaqiyatsiz bo'ldi");
+        let errMsg = "";
+        try {
+          const errData = await res.json();
+          errMsg = errData.error || errData.message;
+        } catch {
+          try {
+            const txt = await res.text();
+            errMsg = txt.slice(0, 160);
+          } catch {}
+        }
+        throw new Error(errMsg || "Savolga javob berish muvaffaqiyatsiz bo'ldi");
       }
       const data = await res.json();
       setMessages(prev => [...prev, { sender: 'bot', text: data.text || "Uzr, savolingizga javob olishda xatolik yuz berdi." }]);
     } catch (err: any) {
       console.error("Gemini chat failed:", err);
-      setMessages(prev => [...prev, { sender: 'bot', text: "Yordamchi vaqtincha offline rejimda. Iltimos, ulanish tarmoqlari va API kalit sozlamalarini tekshiring hamda birozdan keyin qayta yozib ko'ring." }]);
+      setMessages(prev => [...prev, { sender: 'bot', text: err.message || "Yordamchi vaqtincha offline rejimda. Iltimos, ulanish tarmoqlari va API kalit sozlamalarini tekshiring hamda birozdan keyin qayta yozib ko'ring." }]);
     } finally {
       setIsAgentReplying(false);
     }
@@ -375,6 +394,14 @@ export default function AiCenter({ currentLang, theme = 'dark' }: AiCenterProps)
                   }`}>
                     {sumOutput || t.sumResultPlaceholder}
                   </div>
+                  {sumOutput && onSendToHandwriting && (
+                    <button
+                      onClick={() => onSendToHandwriting(sumOutput)}
+                      className="mt-3 w-full py-2.5 bg-gradient-to-r from-purple-600 to-indigo-650 hover:from-purple-700 hover:to-indigo-750 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 duration-200 cursor-pointer shadow active:scale-95"
+                    >
+                      ✍️ {currentLang === 'uz' ? "Xulosani Qo'lyozma Studiyasiga o'tkazish" : currentLang === 'ru' ? "Перевести резюме в почерк" : "Convert summary to Handwriting"}
+                    </button>
+                  )}
                 </div>
 
                 <span className="text-[10px] font-mono text-slate-500 block text-right mt-3">{t.aiFooterText}</span>

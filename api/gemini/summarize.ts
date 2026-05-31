@@ -1,6 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 
-const apiKey = process.env.GEMINI_API_KEY || "AQ.Ab8RN6JV49tQwhqdKI-1YZT4YerX2LMMK8ZH6B_uv7exn03l6w";
+const apiKey = process.env.GEMINI_API_KEY || "";
 const ai = new GoogleGenAI({
   apiKey: apiKey,
   httpOptions: {
