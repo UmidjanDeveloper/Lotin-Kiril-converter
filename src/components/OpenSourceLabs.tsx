@@ -1,921 +1,1034 @@
 /**
- * @license
- * SPDX-License-Identifier: Apache-2.0
+ * @license SPDX-License-Identifier: Apache-2.0
+ * Handwriting Studio — WYSIWYG Word-like editor
+ * Click anywhere on the page to add text, drag to reposition, print or export.
  */
 
-import React, { useState, useRef, useEffect } from 'react';
-import { 
-  FileText, ArrowDownToLine, Sparkles, PenTool, HelpCircle, Download, 
-  ZoomIn, ZoomOut, RefreshCw, FileDown, Sliders, AlertCircle, UploadCloud, Check, X
-} from 'lucide-react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import JSZip from 'jszip';
 import { jsPDF } from 'jspdf';
 import { PDFDocument } from 'pdf-lib';
+import mammoth from 'mammoth';
+import {
+  PenTool, Plus, Trash2, Move, Printer, Download, FileDown,
+  UploadCloud, X, Check, AlertCircle, Bold, Italic, Underline,
+  AlignLeft, AlignCenter, AlignRight, ZoomIn, ZoomOut, RefreshCw,
+  Type, Layers, Eye, EyeOff, ChevronDown
+} from 'lucide-react';
 
-interface OpenSourceLabsProps {
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface TextBlock {
+  id: string;
+  text: string;
+  x: number;      // px from paper left
+  y: number;      // px from paper top
+  w: number;      // px width
+  fontSize: number;
+  fontFamily: string;
+  color: string;
+  bold: boolean;
+  italic: boolean;
+  underline: boolean;
+  align: 'left' | 'center' | 'right';
+}
+
+type PaperType = 'ruled' | 'grid' | 'blank' | 'yellow';
+type FontKey  = 'Caveat' | 'Marck Script' | 'Bad Script';
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const PAPER_W = 794;   // A4 96-dpi width  px
+const PAPER_H = 1123;  // A4 96-dpi height px
+const PAPER_MARGIN_L = 90;
+const PAPER_MARGIN_T = 80;
+
+const FONTS: { id: FontKey; label: string }[] = [
+  { id: 'Caveat',       label: 'Caveat (Standart)'   },
+  { id: 'Marck Script', label: 'Marck Script (Nozik)' },
+  { id: 'Bad Script',   label: 'Bad Script (Kursiv)'  },
+];
+
+const PEN_COLORS = [
+  { hex: '#2563eb', label: "Ko'k",      bg: 'bg-blue-600'  },
+  { hex: '#1e3a8a', label: "To'q ko'k", bg: 'bg-blue-900'  },
+  { hex: '#111827', label: 'Qora',      bg: 'bg-gray-900'  },
+  { hex: '#dc2626', label: 'Qizil',     bg: 'bg-red-600'   },
+];
+
+const TR = {
+  uz: {
+    title: "Qo'lyozma Studiyasi",
+    sub: "Varoqda istalgan joyga bosib matn yozing — Word kabi tahrirlang, chop eting.",
+    addBlock: "Matn qo'shish",
+    deleteBlock: "O'chirish",
+    clearAll: "Hammasini tozalash",
+    print: "Chop etish",
+    exportPdf: "PDF yuklab olish",
+    exportPng: "PNG rasm",
+    exportDocx: "Word (.docx)",
+    upload: "Fayl yuklash (.docx / .pdf / .txt)",
+    dropzone: "Faylni bu yerga tashlang yoki bosing",
+    font: "Shrift",
+    paper: "Qog'oz turi",
+    penColor: "Ruchka rangi",
+    fontSize: "Shrift o'lchami",
+    paperRuled: "Chiziqli daftar",
+    paperGrid: "Katak (matematika)",
+    paperBlank: "Bo'sh oq qog'oz",
+    paperYellow: "Sariq daftarcha",
+    zoom: "Ko'rish kattaligi",
+    clickHint: "Varoqning istalgan joyiga bosib, matn yozing",
+    uploadOk: "Fayl muvaffaqiyatli o'qildi!",
+    uploadErr: "Faqat .docx, .pdf va .txt fayllari qo'llab-quvvatlanadi.",
+    reading: "O'qilmoqda...",
+    privacy: "Barcha amallar faqat brauzeringizda bajariladi — hech narsa serverga yuklanmaydi.",
+  },
+  ru: {
+    title: "Студия Почерка",
+    sub: "Кликните в любом месте страницы чтобы написать — редактируйте как в Word.",
+    addBlock: "Добавить текст",
+    deleteBlock: "Удалить",
+    clearAll: "Очистить всё",
+    print: "Печать",
+    exportPdf: "Скачать PDF",
+    exportPng: "PNG изображение",
+    exportDocx: "Word (.docx)",
+    upload: "Загрузить файл (.docx / .pdf / .txt)",
+    dropzone: "Перетащите файл сюда или нажмите",
+    font: "Шрифт",
+    paper: "Тип бумаги",
+    penColor: "Цвет чернил",
+    fontSize: "Размер шрифта",
+    paperRuled: "Тетрадь в линейку",
+    paperGrid: "Тетрадь в клетку",
+    paperBlank: "Чистый белый лист",
+    paperYellow: "Желтый блокнот",
+    zoom: "Масштаб",
+    clickHint: "Кликните в любое место страницы для ввода текста",
+    uploadOk: "Файл успешно прочитан!",
+    uploadErr: "Поддерживаются только .docx, .pdf и .txt файлы.",
+    reading: "Чтение...",
+    privacy: "Все операции выполняются только в вашем браузере — ничего не загружается на сервер.",
+  },
+  en: {
+    title: "Handwriting Studio",
+    sub: "Click anywhere on the page to place text — edit like Word, print or export.",
+    addBlock: "Add Text",
+    deleteBlock: "Delete",
+    clearAll: "Clear All",
+    print: "Print",
+    exportPdf: "Download PDF",
+    exportPng: "PNG Image",
+    exportDocx: "Word (.docx)",
+    upload: "Upload file (.docx / .pdf / .txt)",
+    dropzone: "Drop file here or click to browse",
+    font: "Font",
+    paper: "Paper Type",
+    penColor: "Pen Color",
+    fontSize: "Font Size",
+    paperRuled: "Ruled Notebook",
+    paperGrid: "Grid / Math Paper",
+    paperBlank: "Blank White",
+    paperYellow: "Yellow Legal Pad",
+    zoom: "Zoom",
+    clickHint: "Click anywhere on the page to place a text block",
+    uploadOk: "File imported successfully!",
+    uploadErr: "Only .docx, .pdf and .txt files are supported.",
+    reading: "Reading...",
+    privacy: "All processing happens locally in your browser — nothing is uploaded to any server.",
+  },
+} as const;
+
+// ─── Paper background helper ───────────────────────────────────────────────────
+
+function paperBgStyle(paper: PaperType, lineH = 36): React.CSSProperties {
+  if (paper === 'blank') return { background: '#fbfbfa' };
+  if (paper === 'yellow') return {
+    background: '#fef9c3',
+    backgroundImage: `repeating-linear-gradient(transparent, transparent ${lineH - 1}px, #cab614 ${lineH - 1}px, #cab614 ${lineH}px)`,
+    backgroundPositionY: `${PAPER_MARGIN_T}px`,
+  };
+  if (paper === 'grid') return {
+    background: '#fff',
+    backgroundImage: `
+      repeating-linear-gradient(#dde3ea 0px, #dde3ea 1px, transparent 1px, transparent 25px),
+      repeating-linear-gradient(90deg, #dde3ea 0px, #dde3ea 1px, transparent 1px, transparent 25px)
+    `,
+  };
+  // ruled
+  return {
+    background: '#fff',
+    backgroundImage: `repeating-linear-gradient(transparent, transparent ${lineH - 1}px, #93c5fd ${lineH - 1}px, #93c5fd ${lineH}px)`,
+    backgroundPositionY: `${PAPER_MARGIN_T}px`,
+  };
+}
+
+// ─── Main component ────────────────────────────────────────────────────────────
+
+interface Props {
   currentLang?: 'uz' | 'ru' | 'en';
   theme?: 'light' | 'dark';
   sharedHandwriteText?: string;
   clearSharedHandwriteText?: () => void;
 }
 
-// Translations specific to Handwriting Studio
-const LAB_TRANSLATIONS = {
-  uz: {
-    title: "Qo'lyozma Studiyasi (Handwrite)",
-    subtitle: "Oddiy matn, Word (.docx) va .txt hujjatlarini insoniy qo'lyozmaga o'tkazish tizimi",
-    privateBadge: "Off-Grid (100% Offline & Xavfsiz)",
-    
-    // Handwrite
-    hwTitle: "Hujjatlarni Qo'lyozmaga O'tkazish",
-    hwDesc: "Kiritilgan rasmiy matnlarni chiroyli, tushunarli qo'lyozmaga aylantiring. Haqiqiy maktab daftari, katakli varaqlar yoki sariq bloknot andozalarida.",
-    hwInputLabel: "Daftarga tushiriladigan matn (Tahrirlash mumkin)",
-    hwSheetPreview: "Qo'lyozma Varaqi (A4)",
-    hwSettings: "Ruchka va Daftar Sozlamalari",
-    hwFontFamily: "Yozuv Shrifti / Poçerk",
-    hwPaperType: "Daftar / Qog'oz turi",
-    hwPaperRuled: "Chiziqli Daftar (Notebook)",
-    hwPaperGrid: "Katakli Matematika (Graph)",
-    hwPaperBlank: "Oq Qog'oz (Premium Blank)",
-    hwPaperLegal: "Sariq Daftarcha (Legal Yellow)",
-    hwPenColor: "Gel Ruchka Rangi",
-    hwPenBlue: "Moviy Ko'k",
-    hwPenRoyalBlue: "To'q Qirollik Ko'k",
-    hwPenBlack: "Qora Ko'mir",
-    hwPenRed: "Qizil Ruchka",
-    hwFontSize: "Yozuv O'lchami",
-    hwJitter: "Insoniy Tebranish (Jitter)",
-    hwLineSpacing: "Qator Oralig'i",
-    hwExportJpg: "Rasm Sifatida Yuklash (PNG)",
-    
-    // File upload
-    hwUploadTitle: "Word (.docx), PDF yoki Matn (.txt) Faylini Yuklash",
-    hwUploadDropzone: "Word (.docx), PDF yoki oddiy matn (.txt) faylini bu yerga tashlang yoki bosing",
-    hwUploadError: "Hujjatni o'qishda xatolik yuz berdi. Faqat .docx, .pdf va .txt formatlari qo'llab-quvvatlanadi.",
-    hwUploadSuccess: "Hujjat matni muvaffaqiyatli o'qildi va daftar sahifasiga o'tkazildi!",
-    hwUploadReading: "Fayl tahlil qilinmoqda...",
-    
-    laNotice: "Ushbu qo'lyozma generatori to'liq offline rejimda ishlaydi va barcha amallar faqat kompyuteringiz ichida bajariladi. Qo'lyozmalaringiz, shablon va fayllaringiz ochiq internet tarmoqlariga yuklanmaydi va mutlaqo maxfiy qoladi."
-  },
-  ru: {
-    title: "Студия Почерка (Handwrite)",
-    subtitle: "Система перевода печатного текста, файлов Word (.docx) и .txt в реалистичный рукописный вид",
-    privateBadge: "Off-Grid (100% Offline & Безопасно)",
-    
-    // Handwrite
-    hwTitle: "Перевод Документов в Рукопись",
-    hwDesc: "Превращайте набранный текст или импортированные файлы в реалистичный рукописный вид на симуляции различных тетрадей и бланков.",
-    hwInputLabel: "Текст для переноса в тетрадь (можно редактировать)",
-    hwSheetPreview: "Рукописный Лист (A4)",
-    hwSettings: "Настройки письма",
-    hwFontFamily: "Рукописный Шрифт",
-    hwPaperType: "Тип бумаги",
-    hwPaperRuled: "Тетрадь в линейку (Ruled)",
-    hwPaperGrid: "Тетрадь в клетку (Graph)",
-    hwPaperBlank: "Чистый белый лист (Blank)",
-    hwPaperLegal: "Желтый блокнот (Yellow Legal)",
-    hwPenColor: "Цвет чернил",
-    hwPenBlue: "Синяя паста",
-    hwPenRoyalBlue: "Королевский синий",
-    hwPenBlack: "Угольно-черный",
-    hwPenRed: "Красная паста",
-    hwFontSize: "Размер симуляции",
-    hwJitter: "Эффект дрожания руки (Jitter)",
-    hwLineSpacing: "Межстрочный интервал",
-    hwExportJpg: "Скачать как изображение (PNG)",
-    
-    // File upload
-    hwUploadTitle: "Загрузить Word (.docx), PDF или Текст (.txt)",
-    hwUploadDropzone: "Перетащите файл Word (.docx), PDF или .txt сюда или нажмите для выбора",
-    hwUploadError: "Ошибка при чтении документа. Поддерживаются только форматы .docx, .pdf и .txt.",
-    hwUploadSuccess: "Текст документа успешно импортирован на страницу тетради!",
-    hwUploadReading: "Чтение файла...",
-    
-    laNotice: "Этот генератор рукописного текста работает полностью локально внутри вашего браузера. Hикакие данные, черновики или загруженные файлы не покидают ваше устройство и остаются строго конфиденциальными."
-  },
-  en: {
-    title: "Handwriting Studio",
-    subtitle: "Convert typed text, Word documents (.docx), plain text (.txt), or PDF into realistic handwriting templates",
-    privateBadge: "Off-Grid (100% Offline & Reliable)",
-    
-    // Handwrite
-    hwTitle: "Convert Documents to Handwritten Style",
-    hwDesc: "Convert virtual transcripts, letters, and templates into organic, realistic handwriting with custom spacing, ruling styles, and fluid pen inks.",
-    hwInputLabel: "Text to write in notebook (Editable)",
-    hwSheetPreview: "Handwritten Page (A4)",
-    hwSettings: "Writing Parameters",
-    hwFontFamily: "Handwriting Font",
-    hwPaperType: "Paper Type",
-    hwPaperRuled: "Ruled Notebook Paper",
-    hwPaperGrid: "Grid Mathematics Paper",
-    hwPaperBlank: "Premium Blank Leaf",
-    hwPaperLegal: "Yellow Legal Page",
-    hwPenColor: "Gel Pen Color",
-    hwPenBlue: "Water Gel Blue",
-    hwPenRoyalBlue: "Royal Vault Blue",
-    hwPenBlack: "Charcoal Black",
-    hwPenRed: "Red Marking Pen",
-    hwFontSize: "Font Size Scale",
-    hwJitter: "Hand Jitter Factor",
-    hwLineSpacing: "Line Height Spacing",
-    hwExportJpg: "Download as Image (PNG)",
-    
-    // File upload
-    hwUploadTitle: "Upload Word (.docx), PDF, or Text (.txt)",
-    hwUploadDropzone: "Drop Word document (.docx), PDF, or plain text (.txt) here or click to import",
-    hwUploadError: "Error parsing file. Only standard, non-password .docx, .pdf, and .txt files are supported.",
-    hwUploadSuccess: "Document content compiled successfully into handwriting sandbox!",
-    hwUploadReading: "Compiling document...",
-    
-    laNotice: "This handwriting generator executes robustly offline inside the local sandbox. Your private files, writing outcomes, and templates are protected and never cross the network."
-  }
-};
-
-export default function OpenSourceLabs({ 
-  currentLang = 'uz', 
+export default function OpenSourceLabs({
+  currentLang = 'uz',
   theme = 'dark',
   sharedHandwriteText = '',
-  clearSharedHandwriteText
-}: OpenSourceLabsProps) {
-  const t = LAB_TRANSLATIONS[currentLang] || LAB_TRANSLATIONS.uz;
+  clearSharedHandwriteText,
+}: Props) {
+  const t = TR[currentLang] ?? TR.uz;
 
-  // --- HANDWRITE DATA & CONFIG STATE ---
-  const [hwText, setHwText] = useState('Salom! Bu insoniy qo\'lyozma simulyatori va studiyasidir.\nMen ushbu yozilgan matnlarni shunchaki kompyuter shriftida emas, balki xuddi haqiqiy daftar varag\'ida oobiydiy chiziqli, matematika kataklarida yoki rasmiy va oq varaqda yozilgan insoniy qo\'lyozmaga aylantira olaman!\n\nHattoki kompyuterdan tayyor Word (.docx) yoki matnli (.txt) hujjat yuklasangiz ham, men uni o\'qib avtomatik ravishda chiroyli daftarga tushirib beraman!\n\nYozuvning chekka chizig\'ini (margin), harflar tebranishi va jitterini boshqaring hamda tayyor natijani bitta tugma orqali rasm qilib yuklab oling.\n\nSana: ' + new Date().toLocaleDateString() + '\nImzo: ________________');
-  const [hwFont, setHwFont] = useState<'Caveat' | 'Marck Script' | 'Bad Script'>('Caveat');
-  const [hwPaper, setHwPaper] = useState<'ruled' | 'grid' | 'blank' | 'yellow'>('ruled');
-  const [hwPen, setHwPen] = useState<'#2563eb' | '#1e3a8a' | '#111827' | '#dc2626'>('#2563eb');
-  const [hwSize, setHwSize] = useState<number>(20);
-  const [hwJitterValue, setHwJitterValue] = useState<number>(1);
-  const [hwLineSpace, setHwLineSpace] = useState<number>(28);
-  const [hwZoom, setHwZoom] = useState<number>(1.0);
-  
-  // File upload state for DOCX/.txt handler
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadError, setUploadError] = useState('');
-  const [uploadSuccess, setUploadSuccess] = useState('');
-  
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const sheetCanvasRef = useRef<HTMLCanvasElement>(null);
+  // ── Paper / style settings ──────────────────────────────────────────────────
+  const [paper, setPaper]       = useState<PaperType>('ruled');
+  const [font,  setFont]        = useState<FontKey>('Caveat');
+  const [color, setColor]       = useState('#2563eb');
+  const [fSize, setFSize]       = useState(22);
+  const [bold,  setBold]        = useState(false);
+  const [italic, setItalic]     = useState(false);
+  const [uline, setUline]       = useState(false);
+  const [align, setAlign]       = useState<'left'|'center'|'right'>('left');
+  const [lineH, setLineH]       = useState(36);
+  const [zoom,  setZoom]        = useState(0.9);
 
-  // Redraw canvas sheet when params change
+  // ── Text blocks (WYSIWYG) ────────────────────────────────────────────────────
+  const [blocks,    setBlocks]    = useState<TextBlock[]>([]);
+  const [activeId,  setActiveId]  = useState<string | null>(null);
+  const [dragState, setDragState] = useState<{ id: string; ox: number; oy: number } | null>(null);
+
+  // ── File upload ──────────────────────────────────────────────────────────────
+  const [uploading, setUploading] = useState(false);
+  const [upMsg,     setUpMsg]     = useState<{ type: 'ok'|'err'; text: string } | null>(null);
+
+  const canvasRef   = useRef<HTMLCanvasElement>(null);
+  const paperRef    = useRef<HTMLDivElement>(null);
+  const fileRef     = useRef<HTMLInputElement>(null);
+
+  // ── Shared text from other tabs ─────────────────────────────────────────────
   useEffect(() => {
-    drawHandwriteSheet();
-  }, [hwText, hwFont, hwPaper, hwPen, hwSize, hwJitterValue, hwLineSpace]);
-
-  // Keep re-drawing the canvas as fonts load dynamically in the browser
-  useEffect(() => {
-    if (typeof document !== 'undefined' && (document as any).fonts) {
-      (document as any).fonts.ready.then(() => {
-        drawHandwriteSheet();
-      });
-    }
-  }, [hwText, hwFont]);
-
-  // Listen to shared handwrite updates
-  useEffect(() => {
-    if (sharedHandwriteText) {
-      setHwText(sharedHandwriteText);
-      if (clearSharedHandwriteText) {
-        clearSharedHandwriteText();
-      }
-    }
-  }, [sharedHandwriteText, clearSharedHandwriteText]);
-
-  // --- FILE PARSERS (DOCX, PDF AND TXT) ---
-  const parseDocxFile = async (file: File): Promise<string> => {
-    try {
-      const arrayBuffer = await file.arrayBuffer();
-      const zip = await JSZip.loadAsync(arrayBuffer);
-      const docXml = await zip.file("word/document.xml")?.async("text");
-      if (!docXml) {
-        throw new Error("Invalid format");
-      }
-      const parser = new DOMParser();
-      const xmlDoc = parser.parseFromString(docXml, "text/xml");
-      const paragraphs = xmlDoc.getElementsByTagName("w:p");
-      const lines: string[] = [];
-      for (let i = 0; i < paragraphs.length; i++) {
-        const p = paragraphs[i];
-        const textElements = p.getElementsByTagName("w:t");
-        let pText = "";
-        for (let j = 0; j < textElements.length; j++) {
-          pText += textElements[j].textContent || "";
-        }
-        lines.push(pText);
-      }
-      return lines.join("\n").trim();
-    } catch (err) {
-      throw new Error(t.hwUploadError);
-    }
-  };
-
-  const parsePdfFile = async (file: File): Promise<string> => {
-    try {
-      const arrayBuffer = await file.arrayBuffer();
-      const pdfDoc = await PDFDocument.load(arrayBuffer);
-      const pages = pdfDoc.getPages();
-      let extractedText = "";
-
-      for (let i = 0; i < pages.length; i++) {
-        const page = pages[i];
-        const contentStream = (page as any).node.Contents();
-        if (contentStream) {
-          const streamData = contentStream.decode();
-          const textDecoder = new TextDecoder('utf-8');
-          const decodedStr = textDecoder.decode(streamData);
-          
-          const tjRegex = /\(([^)]+)\)\s*Tj/g;
-          let match;
-          let pageText = "";
-          while ((match = tjRegex.exec(decodedStr)) !== null) {
-            pageText += match[1] + " ";
-          }
-          
-          if (!pageText.trim()) {
-            const tjComplexRegex = /\[([^\]]+)\]\s*TJ/g;
-            while ((match = tjComplexRegex.exec(decodedStr)) !== null) {
-              const innerParentheses = /\(([^)]+)\)/g;
-              let innerMatch;
-              while ((innerMatch = innerParentheses.exec(match[1])) !== null) {
-                pageText += innerMatch[1] + " ";
-              }
-            }
-          }
-
-          pageText = pageText
-            .replace(/\\r/g, '\n')
-            .replace(/\\n/g, '\n')
-            .replace(/\\t/g, '\t')
-            .replace(/\\\( /g, '(')
-            .replace(/\\\)/g, ')')
-            .replace(/\\/g, '');
-
-          if (pageText.trim()) {
-            extractedText += pageText + "\n\n";
-          }
-        }
-      }
-
-      if (!extractedText.trim()) {
-        const textDecoder = new TextDecoder('utf-8');
-        const rawText = textDecoder.decode(arrayBuffer);
-        const chunks: string[] = [];
-        const parenthesizedRegex = /\(([^)]+)\)\s*(?:Tj|TJ)/g;
-        let m;
-        while ((m = parenthesizedRegex.exec(rawText)) !== null && chunks.length < 350) {
-          if (m[1].length > 1 && !m[1].includes('/') && !m[1].includes('\\')) {
-            chunks.push(m[1]);
-          }
-        }
-        extractedText = chunks.join(' ');
-      }
-
-      return extractedText.trim() || (currentLang === 'uz' ? "PDF hujjati matni o'qib bo'lmadi yoki u skanerlangan rasm formatida. Quyida yozib davom ettirishingiz mumkin." : "Не удалось извлечь текст из PDF. Вы можете ввести его вручную ниже.");
-    } catch (err) {
-      throw new Error(currentLang === 'uz' ? "PDF faylni tahlil qilishda xatolik" : "Ошибка парсинга PDF документа");
-    }
-  };
-
-  const readTxtFile = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        resolve(e.target?.result as string || "");
+    if (!sharedHandwriteText) return;
+    const lines = sharedHandwriteText.split('\n');
+    let y = PAPER_MARGIN_T + 20;
+    const newBlocks: TextBlock[] = lines.filter(l => l.trim()).map((line) => {
+      const b: TextBlock = {
+        id: `${Date.now()}-${Math.random()}`,
+        text: line,
+        x: PAPER_MARGIN_L,
+        y,
+        w: PAPER_W - PAPER_MARGIN_L - 30,
+        fontSize: fSize,
+        fontFamily: font,
+        color,
+        bold, italic, underline: uline,
+        align,
       };
-      reader.onerror = () => reject(new Error("TXT error"));
-      reader.readAsText(file);
+      y += lineH * 2;
+      return b;
     });
+    setBlocks(newBlocks);
+    if (clearSharedHandwriteText) clearSharedHandwriteText();
+  }, [sharedHandwriteText]);
+
+  // ── Click on paper → add block ───────────────────────────────────────────────
+  const handlePaperClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (dragState) return;
+    const target = e.target as HTMLElement;
+    if (target.closest('[data-block-id]')) return;
+
+    const rect = paperRef.current!.getBoundingClientRect();
+    const scale = PAPER_W / rect.width;
+    const x = Math.max(10, (e.clientX - rect.left) * scale);
+    const y = Math.max(10, (e.clientY - rect.top)  * scale);
+
+    const id = `b-${Date.now()}`;
+    const nb: TextBlock = {
+      id, text: '', x, y,
+      w: Math.min(PAPER_W - x - 20, 500),
+      fontSize: fSize, fontFamily: font, color,
+      bold, italic, underline: uline, align,
+    };
+    setBlocks(p => [...p, nb]);
+    setActiveId(id);
+  }, [dragState, fSize, font, color, bold, italic, uline, align]);
+
+  // ── Drag handling ────────────────────────────────────────────────────────────
+  const startDrag = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const rect = paperRef.current!.getBoundingClientRect();
+    const scale = PAPER_W / rect.width;
+    const block = blocks.find(b => b.id === id)!;
+    setDragState({
+      id,
+      ox: e.clientX * scale - block.x,
+      oy: e.clientY * scale - block.y,
+    });
+    setActiveId(id);
   };
 
-  const handleFileUpload = async (file: File) => {
-    setUploadError('');
-    setUploadSuccess('');
-    setIsUploading(true);
+  const onMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (!dragState) return;
+    const rect = paperRef.current!.getBoundingClientRect();
+    const scale = PAPER_W / rect.width;
+    const nx = Math.max(0, Math.min(PAPER_W - 60, e.clientX * scale - dragState.ox));
+    const ny = Math.max(0, Math.min(PAPER_H - 40, e.clientY * scale - dragState.oy));
+    setBlocks(p => p.map(b => b.id === dragState.id ? { ...b, x: nx, y: ny } : b));
+  }, [dragState]);
 
+  const onMouseUp = useCallback(() => setDragState(null), []);
+
+  // ── Block text edit ──────────────────────────────────────────────────────────
+  const updateBlockText = (id: string, text: string) => {
+    setBlocks(p => p.map(b => b.id === id ? { ...b, text } : b));
+  };
+
+  const deleteBlock = (id: string) => {
+    setBlocks(p => p.filter(b => b.id !== id));
+    if (activeId === id) setActiveId(null);
+  };
+
+  // Apply toolbar settings to active block
+  const applyToActive = (patch: Partial<TextBlock>) => {
+    if (!activeId) return;
+    setBlocks(p => p.map(b => b.id === activeId ? { ...b, ...patch } : b));
+  };
+
+  const activeBlock = blocks.find(b => b.id === activeId);
+
+  // ── File parsers ─────────────────────────────────────────────────────────────
+  const parseDocx = async (file: File): Promise<string> => {
+    const ab = await file.arrayBuffer();
+    const res = await mammoth.extractRawText({ arrayBuffer: ab });
+    return res.value.trim();
+  };
+
+  const parsePdf = async (file: File): Promise<string> => {
+    try {
+      const ab = await file.arrayBuffer();
+      const doc = await PDFDocument.load(ab);
+      let out = '';
+      for (const page of doc.getPages()) {
+        const content = (page as any).node?.Contents?.();
+        if (!content) continue;
+        const raw = new TextDecoder().decode(content.decode());
+        const m = raw.matchAll(/\(([^)]+)\)\s*Tj/g);
+        for (const match of m) out += match[1] + ' ';
+      }
+      return out.trim() || '(PDF matni o\'qib bo\'lmadi — qo\'l bilan yozing)';
+    } catch {
+      return '(PDF tahlilida xato)';
+    }
+  };
+
+  const parseTxt = (file: File): Promise<string> =>
+    new Promise((res, rej) => {
+      const fr = new FileReader();
+      fr.onload = e => res(e.target?.result as string ?? '');
+      fr.onerror = () => rej(new Error('txt error'));
+      fr.readAsText(file);
+    });
+
+  const handleFile = async (file: File) => {
+    setUploading(true);
+    setUpMsg(null);
     try {
       const ext = file.name.split('.').pop()?.toLowerCase();
-      let extractedText = "";
-      if (ext === 'docx') {
-        extractedText = await parseDocxFile(file);
-      } else if (ext === 'pdf') {
-        extractedText = await parsePdfFile(file);
-      } else if (ext === 'txt') {
-        extractedText = await readTxtFile(file);
-      } else {
-        throw new Error(currentLang === 'uz' ? "Faqat Word (.docx), PDF va matn (.txt) fayllari qo'llab-quvvatlanadi" : currentLang === 'ru' ? "Поддерживаются только Word (.docx), PDF и текст (.txt)" : "Only Word (.docx), PDF and plain text (.txt) files are supported");
-      }
+      let text = '';
+      if (ext === 'docx') text = await parseDocx(file);
+      else if (ext === 'pdf') text = await parsePdf(file);
+      else if (ext === 'txt') text = await parseTxt(file);
+      else throw new Error(t.uploadErr);
 
-      if (!extractedText.trim()) {
-        throw new Error(currentLang === 'uz' ? "Hujjat bo'sh yoki undan matn topilmadi" : currentLang === 'ru' ? "Документ пуст или текст не обнаружен" : "Parsed document has empty content");
-      }
+      if (!text.trim()) throw new Error('Fayl bo\'sh yoki matn topilmadi');
 
-      setHwText(extractedText);
-      setUploadSuccess(t.hwUploadSuccess);
+      // Distribute text into blocks
+      const lines = text.split('\n').filter(l => l.trim());
+      let y = PAPER_MARGIN_T + 20;
+      const nb: TextBlock[] = lines.map(line => {
+        const b: TextBlock = {
+          id: `import-${Date.now()}-${Math.random()}`,
+          text: line,
+          x: PAPER_MARGIN_L,
+          y,
+          w: PAPER_W - PAPER_MARGIN_L - 30,
+          fontSize: fSize,
+          fontFamily: font,
+          color,
+          bold: false, italic: false, underline: false,
+          align: 'left',
+        };
+        y += lineH * Math.ceil(line.length / 60) + lineH * 0.5;
+        return b;
+      });
+      setBlocks(nb);
+      setUpMsg({ type: 'ok', text: t.uploadOk });
     } catch (err: any) {
-      setUploadError(err.message || t.hwUploadError);
+      setUpMsg({ type: 'err', text: err.message || t.uploadErr });
     } finally {
-      setIsUploading(false);
+      setUploading(false);
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      handleFileUpload(e.target.files[0]);
+  // ── Canvas render (for PNG/PDF export) ───────────────────────────────────────
+  const renderCanvas = (): HTMLCanvasElement => {
+    const canvas = canvasRef.current!;
+    canvas.width  = PAPER_W * 2;
+    canvas.height = PAPER_H * 2;
+    const ctx = canvas.getContext('2d')!;
+    const s = 2; // 2× for retina
+
+    // Background
+    ctx.fillStyle = paper === 'yellow' ? '#fef9c3' : '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Lines
+    if (paper === 'ruled' || paper === 'yellow') {
+      const lh = lineH * s;
+      ctx.strokeStyle = paper === 'yellow' ? '#cab614' : '#93c5fd';
+      ctx.lineWidth = 1;
+      for (let y = (PAPER_MARGIN_T + lineH) * s; y < canvas.height; y += lh) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+      }
+      ctx.strokeStyle = '#fca5a5';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(PAPER_MARGIN_L * s, 0);
+      ctx.lineTo(PAPER_MARGIN_L * s, canvas.height);
+      ctx.stroke();
+    } else if (paper === 'grid') {
+      const gs = 25 * s;
+      ctx.strokeStyle = '#dde3ea';
+      ctx.lineWidth = 1;
+      for (let x = 0; x < canvas.width; x += gs) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+      }
+      for (let y = 0; y < canvas.height; y += gs) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+      }
     }
+
+    // Render each block
+    for (const b of blocks) {
+      const style = `${b.italic ? 'italic ' : ''}${b.bold ? 'bold ' : ''}${b.fontSize * s}px "${b.fontFamily}", cursive`;
+      ctx.font  = style;
+      ctx.fillStyle = b.color;
+
+      const maxW = b.w * s;
+      const words = b.text.split(' ');
+      let line = '';
+      const wrapped: string[] = [];
+      for (const word of words) {
+        const test = line + (line ? ' ' : '') + word;
+        if (ctx.measureText(test).width > maxW && line) {
+          wrapped.push(line); line = word;
+        } else line = test;
+      }
+      if (line) wrapped.push(line);
+
+      wrapped.forEach((wl, i) => {
+        const y = (b.y + b.fontSize * (i + 1)) * s;
+        const x = b.x * s;
+        const lineW = ctx.measureText(wl).width;
+
+        let dx = x;
+        if (b.align === 'center') dx = x + (maxW - lineW) / 2;
+        else if (b.align === 'right') dx = x + maxW - lineW;
+
+        ctx.fillText(wl, dx, y, maxW);
+
+        if (b.underline) {
+          ctx.strokeStyle = b.color;
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(dx, y + 2); ctx.lineTo(dx + lineW, y + 2); ctx.stroke();
+        }
+      });
+    }
+
+    return canvas;
   };
 
-  // --- HANDWRITE EXPORTERS ---
+  // ── Export handlers ───────────────────────────────────────────────────────────
+  const handleExportPng = () => {
+    const canvas = renderCanvas();
+    const link = document.createElement('a');
+    link.href = canvas.toDataURL('image/png');
+    link.download = `qolyozma_${Date.now()}.png`;
+    link.click();
+  };
+
   const handleExportPdf = () => {
-    const canvas = sheetCanvasRef.current;
-    if (!canvas) return;
-    const imgData = canvas.toDataURL('image/jpeg', 0.95);
-    const pdf = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4'
-    });
-    pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297);
+    const canvas = renderCanvas();
+    const img = canvas.toDataURL('image/jpeg', 0.92);
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    pdf.addImage(img, 'JPEG', 0, 0, 210, 297);
     pdf.save(`qolyozma_${Date.now()}.pdf`);
   };
 
   const handleExportDocx = async () => {
-    try {
-      const zip = new JSZip();
-      zip.file("[Content_Types].xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Types xmlns="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:o="urn:schemas-microsoft-com:office:office">
-  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-  <Default Extension="xml" ContentType="application/xml"/>
-  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
-</Types>`);
+    const zip = new JSZip();
+    const esc = (s: string) => s
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&apos;');
 
-      zip.folder("_rels")?.file(".rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
-</Relationships>`);
-
-      const escapeXml = (str: string) => {
-        return str
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;')
-          .replace(/'/g, '&apos;');
-      };
-
-      const paragraphsXml = hwText.split('\n').map(p => `
+    const paras = blocks
+      .sort((a, b) => a.y - b.y)
+      .map(b => `
         <w:p>
-          <w:pPr>
-            <w:jc w:val="left"/>
-          </w:pPr>
+          <w:pPr><w:jc w:val="${b.align === 'center' ? 'center' : b.align === 'right' ? 'right' : 'left'}"/></w:pPr>
           <w:r>
             <w:rPr>
               <w:rFonts w:ascii="Arial" w:hAnsi="Arial"/>
-              <w:sz w:val="24"/>
+              <w:sz w:val="${b.fontSize * 2}"/>
+              ${b.bold ? '<w:b/>' : ''}
+              ${b.italic ? '<w:i/>' : ''}
+              ${b.underline ? '<w:u w:val="single"/>' : ''}
             </w:rPr>
-            <w:t>${escapeXml(p)}</w:t>
+            <w:t xml:space="preserve">${esc(b.text)}</w:t>
           </w:r>
         </w:p>`).join('');
 
-      zip.folder("word")?.file("document.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-  <w:body>
-    ${paragraphsXml}
-    <w:sectPr>
-      <w:pgSz w:w="11906" w:h="16838"/>
-      <w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/>
-    </w:sectPr>
-  </w:body>
-</w:document>`);
+    zip.file('[Content_Types].xml', `<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/markup-compatibility/2006"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>`);
+    zip.folder('_rels')?.file('.rels', `<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`);
+    zip.folder('word')?.file('document.xml', `<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${paras}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="850" w:bottom="1134" w:left="1700" w:header="709" w:footer="709" w:gutter="0"/></w:sectPr></w:body></w:document>`);
 
-      const blob = await zip.generateAsync({ type: 'blob' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = `qolyozma_matni_${Date.now()}.docx`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } catch (err) {
-      console.error("Docx generation error", err);
-    }
-  };
-
-  // --- CANVAS GENERATOR ENGINE ---
-  const drawHandwriteSheet = () => {
-    const canvas = sheetCanvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // Set A4 Aspect ratio dimensions (High resolution 800 x 1120 pixels)
-    canvas.width = 800;
-    canvas.height = 1120;
-
-    // 1. Draw Paper Colors
-    if (hwPaper === 'yellow') {
-      ctx.fillStyle = '#fef08a'; // Pastel yellow legal pad
-    } else if (hwPaper === 'blank') {
-      ctx.fillStyle = '#fbfbfa'; // Off-white parchment
-    } else {
-      ctx.fillStyle = '#ffffff'; // Classic notebook white
-    }
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // 2. Geometry configuration for rulings
-    const topMargin = 95;
-    const bottomMargin = 40;
-    const leftMargin = 95;
-
-    if (hwPaper === 'ruled' || hwPaper === 'yellow') {
-      // Draw notebook horizontal ruled lines
-      ctx.strokeStyle = '#93c5fd'; // Soft notebook blue
-      ctx.lineWidth = 1;
-      for (let y = topMargin; y < canvas.height - bottomMargin; y += hwLineSpace) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(canvas.width, y);
-        ctx.stroke();
-      }
-
-      // Left-margin red vertical anchor line
-      ctx.strokeStyle = '#fca5a5'; // Left sidebar red line
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(leftMargin, 0);
-      ctx.lineTo(leftMargin, canvas.height);
-      ctx.stroke();
-    } else if (hwPaper === 'grid') {
-      // Katakli Daftar (Grid mathematics blocks)
-      ctx.strokeStyle = '#e2e8f0'; // Very soft grid slate
-      ctx.lineWidth = 0.8;
-      const gridSize = 25;
-      
-      // Vertical grid columns
-      for (let x = 0; x < canvas.width; x += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, canvas.height);
-        ctx.stroke();
-      }
-      // Horizontal grid rows
-      for (let y = 0; y < canvas.height; y += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(canvas.width, y);
-        ctx.stroke();
-      }
-
-      // Draw red margin lines on grid paper
-      ctx.strokeStyle = '#fca5a5';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(gridSize * 3, 0);
-      ctx.lineTo(gridSize * 3, canvas.height);
-      ctx.stroke();
-    }
-
-    // 3. Draw authentic handwriting text
-    ctx.fillStyle = hwPen;
-    ctx.font = `${hwSize}px "${hwFont}", cursive`;
-    
-    const lines = hwText.split('\n');
-    let currentY = topMargin + hwLineSpace * 0.7; // Vertical offset cursor
-    const maxTextWidth = canvas.width - leftMargin - 55;
-
-    lines.forEach((line) => {
-      // Respect paper bounds limit
-      if (currentY > canvas.height - bottomMargin) return;
-
-      // Smart responsive word wrapping limits
-      const words = line.split(' ');
-      let currentLineText = '';
-      const wrappedLines: string[] = [];
-
-      words.forEach((word) => {
-        const testLine = currentLineText + (currentLineText ? ' ' : '') + word;
-        const metrics = ctx.measureText(testLine);
-        if (metrics.width > maxTextWidth && currentLineText) {
-          wrappedLines.push(currentLineText);
-          currentLineText = word;
-        } else {
-          currentLineText = testLine;
-        }
-      });
-      if (currentLineText) {
-        wrappedLines.push(currentLineText);
-      }
-
-      // Draw character paths with organic, simulated jitter transitions
-      wrappedLines.forEach((subline) => {
-        if (currentY > canvas.height - bottomMargin) return;
-
-        ctx.save();
-        
-        // Random tilts for simulated natural human flow
-        const tiltAngle = (Math.random() * 0.012 - 0.006) * hwJitterValue;
-        const xOffset = leftMargin + 12 + (Math.random() * 3 - 1.5) * hwJitterValue;
-        const yOffset = currentY + (Math.random() * 2.5 - 1.25) * hwJitterValue;
-
-        ctx.translate(xOffset, yOffset);
-        ctx.rotate(tiltAngle);
-
-        // Render letters individually with micro jitter to emulate standard real cursive
-        let cursorX = 0;
-        const letters = subline.split('');
-        
-        letters.forEach((char) => {
-          const charTilt = (Math.random() * 0.05 - 0.025) * hwJitterValue;
-          const charYOffset = (Math.random() * 1.5 - 0.75) * hwJitterValue;
-          
-          ctx.save();
-          ctx.translate(cursorX, charYOffset);
-          ctx.rotate(charTilt);
-          ctx.fillText(char, 0, 0);
-          ctx.restore();
-
-          cursorX += ctx.measureText(char).width;
-        });
-
-        ctx.restore();
-        
-        // Advance lines
-        currentY += hwPaper === 'grid' ? 25 : hwLineSpace;
-      });
-    });
-  };
-
-  const handleExportHandwriteJpg = () => {
-    const canvas = sheetCanvasRef.current;
-    if (!canvas) return;
-    const dataUrl = canvas.toDataURL('image/png');
+    const blob = await zip.generateAsync({ type: 'blob' });
     const link = document.createElement('a');
-    link.href = dataUrl;
-    link.download = `qolyozma_${Date.now()}.png`;
-    document.body.appendChild(link);
+    link.href = URL.createObjectURL(blob);
+    link.download = `qolyozma_${Date.now()}.docx`;
     link.click();
-    document.body.removeChild(link);
   };
+
+  const handlePrint = () => {
+    const paper = paperRef.current;
+    if (!paper) return;
+
+    const fontUrl = 'https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=Marck+Script&family=Bad+Script&display=swap';
+    const blocksHtml = blocks.sort((a,b) => a.y - b.y).map(b => `
+      <div style="
+        position:absolute;
+        left:${b.x}px; top:${b.y}px; width:${b.w}px;
+        font-family:'${b.fontFamily}',cursive;
+        font-size:${b.fontSize}px;
+        color:${b.color};
+        font-weight:${b.bold?'bold':'normal'};
+        font-style:${b.italic?'italic':'normal'};
+        text-decoration:${b.underline?'underline':'none'};
+        text-align:${b.align};
+        white-space:pre-wrap;
+        word-break:break-word;
+        line-height:${lineH}px;
+      ">${b.text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>')}</div>
+    `).join('');
+
+    const bgStyle = (() => {
+      if (paper === 'blank') return 'background:#fbfbfa;';
+      if (paper === 'yellow') return `background:#fef9c3;background-image:repeating-linear-gradient(transparent,transparent ${lineH-1}px,#cab614 ${lineH-1}px,#cab614 ${lineH}px);background-position-y:${PAPER_MARGIN_T}px;`;
+      if (paper === 'grid') return `background:#fff;background-image:repeating-linear-gradient(#dde3ea 0,#dde3ea 1px,transparent 1px,transparent 25px),repeating-linear-gradient(90deg,#dde3ea 0,#dde3ea 1px,transparent 1px,transparent 25px);`;
+      return `background:#fff;background-image:repeating-linear-gradient(transparent,transparent ${lineH-1}px,#93c5fd ${lineH-1}px,#93c5fd ${lineH}px);background-position-y:${PAPER_MARGIN_T}px;`;
+    })();
+
+    const pw = window.open('', '_blank');
+    if (!pw) { alert("Popup ruxsatini yoqing"); return; }
+    pw.document.write(`<!DOCTYPE html><html><head>
+      <link rel="preconnect" href="https://fonts.googleapis.com">
+      <link href="${fontUrl}" rel="stylesheet">
+      <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        @media print{
+          @page{size:A4;margin:0}
+          body{margin:0;padding:0}
+          .no-print{display:none!important}
+          .paper{box-shadow:none!important;border:none!important}
+        }
+        body{background:#e5e7eb;display:flex;flex-direction:column;align-items:center;padding:20px;font-family:sans-serif}
+        .paper{
+          ${bgStyle}
+          width:${PAPER_W}px;min-height:${PAPER_H}px;position:relative;
+          box-shadow:0 4px 24px rgba(0,0,0,.18);
+        }
+        ${(paper==='ruled'||paper==='yellow')
+          ? `.paper::before{content:'';position:absolute;top:0;bottom:0;left:${PAPER_MARGIN_L}px;width:2px;background:#fca5a5;pointer-events:none;}`
+          : ''}
+        .btn{margin:12px 8px 0;padding:10px 22px;background:#4f46e5;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px}
+        .btn:hover{background:#4338ca}
+      </style>
+    </head><body>
+      <div class="no-print">
+        <button class="btn" onclick="window.print()">🖨️ Chop etish / Print</button>
+        <button class="btn" style="background:#6b7280" onclick="window.close()">✕ Yopish</button>
+      </div>
+      <div class="paper">${blocksHtml}</div>
+    </body></html>`);
+    pw.document.close();
+  };
+
+  // ── Render ────────────────────────────────────────────────────────────────────
+  const dk = theme === 'dark';
+  const card = dk
+    ? 'bg-slate-900/60 border-slate-800'
+    : 'bg-white border-slate-200 shadow-sm';
+
+  const paperScale = zoom;
 
   return (
-    <div className="space-y-8 animate-slide-up">
-      {/* Brand Header Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-6 animate-slide-up" onMouseMove={onMouseMove} onMouseUp={onMouseUp}>
+      {/* ── Header ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className={`text-xl sm:text-2xl font-black font-display tracking-tight flex items-center gap-2.5 ${
-            theme === 'dark' ? 'text-white' : 'text-slate-900'
-          }`}>
-            <PenTool className="w-6 h-6 text-indigo-500 animate-pulse" />
+          <h2 className={`text-xl font-black font-display flex items-center gap-2 ${dk?'text-white':'text-slate-900'}`}>
+            <PenTool className="w-5 h-5 text-indigo-500 animate-pulse" />
             {t.title}
           </h2>
-          <p className={`text-xs sm:text-sm mt-1 leading-relaxed ${theme === 'dark' ? 'text-slate-400 font-medium' : 'text-slate-550'}`}>
-            {t.subtitle}
+          <p className={`text-xs mt-0.5 ${dk?'text-slate-400':'text-slate-500'}`}>{t.sub}</p>
+        </div>
+        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold font-mono ${dk?'bg-emerald-950/30 text-emerald-400 border-emerald-800/40':'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
+          <RefreshCw className="w-3 h-3 animate-spin" />
+          100% Offline
+        </div>
+      </div>
+
+      {/* ── Main grid ── */}
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
+
+        {/* ── Left panel ── */}
+        <div className="xl:col-span-3 space-y-4">
+
+          {/* File upload */}
+          <div className={`rounded-2xl border p-4 ${card}`}>
+            <p className={`text-[11px] font-black font-mono uppercase tracking-widest mb-3 flex items-center gap-1.5 ${dk?'text-slate-400':'text-slate-500'}`}>
+              <UploadCloud className="w-4 h-4 text-indigo-500" />
+              {t.upload}
+            </p>
+            <div
+              onClick={() => fileRef.current?.click()}
+              className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition ${dk?'border-slate-700 hover:border-indigo-600 bg-slate-900/40 hover:bg-slate-900':'border-slate-200 hover:border-indigo-400 bg-slate-50'}`}
+            >
+              <input ref={fileRef} type="file" accept=".docx,.pdf,.txt" className="hidden"
+                onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])} />
+              <UploadCloud className="w-7 h-7 text-indigo-500 mx-auto mb-1.5" />
+              <p className={`text-xs font-semibold ${dk?'text-slate-300':'text-slate-600'}`}>
+                {uploading ? t.reading : t.dropzone}
+              </p>
+              <span className={`text-[10px] ${dk?'text-slate-500':'text-slate-400'}`}>Max 10 MB</span>
+            </div>
+            {upMsg && (
+              <div className={`mt-2 p-2.5 rounded-xl flex items-center justify-between text-xs font-semibold border ${upMsg.type==='ok'?'bg-emerald-500/10 border-emerald-500/20 text-emerald-400':'bg-rose-500/10 border-rose-500/20 text-rose-400'}`}>
+                <span>{upMsg.text}</span>
+                <button onClick={() => setUpMsg(null)}><X className="w-3.5 h-3.5" /></button>
+              </div>
+            )}
+          </div>
+
+          {/* Settings */}
+          <div className={`rounded-2xl border p-4 space-y-4 ${card}`}>
+            <p className={`text-[11px] font-black font-mono uppercase tracking-widest flex items-center gap-1.5 ${dk?'text-slate-400':'text-slate-500'}`}>
+              <Layers className="w-4 h-4 text-indigo-500" />
+              {t.paper}
+            </p>
+
+            {/* Paper type */}
+            <div className="grid grid-cols-2 gap-1.5">
+              {([
+                ['ruled', t.paperRuled], ['grid', t.paperGrid],
+                ['blank', t.paperBlank], ['yellow', t.paperYellow],
+              ] as [PaperType, string][]).map(([id, label]) => (
+                <button key={id} onClick={() => setPaper(id)}
+                  className={`py-1.5 px-2 text-[11px] font-semibold border rounded-xl transition cursor-pointer text-center ${
+                    paper === id
+                      ? 'bg-indigo-600 text-white border-indigo-600'
+                      : dk ? 'border-slate-800 text-slate-400 hover:border-slate-600 hover:text-white bg-slate-900/40'
+                           : 'border-slate-200 text-slate-600 hover:bg-slate-100 bg-white'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {/* Font */}
+            <div>
+              <label className={`text-[10px] font-bold font-mono uppercase block mb-1.5 ${dk?'text-slate-500':'text-slate-400'}`}>{t.font}</label>
+              <div className="flex flex-col gap-1.5">
+                {FONTS.map(f => (
+                  <button key={f.id} onClick={() => { setFont(f.id); applyToActive({ fontFamily: f.id }); }}
+                    className={`py-1.5 px-3 text-[11px] font-semibold border rounded-xl transition cursor-pointer text-left ${
+                      font === f.id
+                        ? 'bg-indigo-600 text-white border-indigo-600'
+                        : dk ? 'border-slate-800 text-slate-400 hover:border-slate-600 hover:text-white bg-slate-900/40'
+                             : 'border-slate-200 text-slate-600 hover:bg-slate-100 bg-white'
+                    }`}
+                    style={{ fontFamily: `"${f.id}", cursive` }}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Pen color */}
+            <div>
+              <label className={`text-[10px] font-bold font-mono uppercase block mb-1.5 ${dk?'text-slate-500':'text-slate-400'}`}>{t.penColor}</label>
+              <div className="flex gap-2 flex-wrap">
+                {PEN_COLORS.map(c => (
+                  <button key={c.hex}
+                    onClick={() => { setColor(c.hex); applyToActive({ color: c.hex }); }}
+                    title={c.label}
+                    className={`w-8 h-8 rounded-xl border-2 transition cursor-pointer ${c.bg} ${color === c.hex ? 'border-white ring-2 ring-indigo-500' : 'border-transparent'}`}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Font size */}
+            <div>
+              <label className={`text-[10px] font-bold font-mono uppercase flex justify-between ${dk?'text-slate-500':'text-slate-400'}`}>
+                <span>{t.fontSize}</span>
+                <span className="text-indigo-400">{fSize}px</span>
+              </label>
+              <input type="range" min={12} max={36} value={fSize}
+                onChange={e => { const v = +e.target.value; setFSize(v); applyToActive({ fontSize: v }); }}
+                className="w-full mt-1.5 accent-indigo-500 cursor-col-resize" />
+            </div>
+
+            {/* Line spacing */}
+            <div>
+              <label className={`text-[10px] font-bold font-mono uppercase flex justify-between ${dk?'text-slate-500':'text-slate-400'}`}>
+                <span>{currentLang === 'uz' ? 'Qator oralig\'i' : currentLang === 'ru' ? 'Интервал строк' : 'Line spacing'}</span>
+                <span className="text-indigo-400">{lineH}px</span>
+              </label>
+              <input type="range" min={28} max={56} value={lineH}
+                onChange={e => setLineH(+e.target.value)}
+                className="w-full mt-1.5 accent-indigo-500 cursor-col-resize" />
+            </div>
+          </div>
+
+          {/* Clear all */}
+          <button
+            onClick={() => { setBlocks([]); setActiveId(null); }}
+            className={`w-full py-2 text-xs font-bold border rounded-xl transition cursor-pointer flex items-center justify-center gap-2 ${
+              dk ? 'border-rose-800/50 text-rose-400 hover:bg-rose-950/30' : 'border-rose-200 text-rose-500 hover:bg-rose-50'
+            }`}
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            {t.clearAll}
+          </button>
+        </div>
+
+        {/* ── Paper area ── */}
+        <div className="xl:col-span-6 flex flex-col gap-4">
+
+          {/* Toolbar */}
+          <div className={`rounded-2xl border p-2.5 flex flex-wrap items-center gap-1.5 ${card}`}>
+            {/* Bold / Italic / Underline */}
+            {([
+              ['bold',       bold,   setBold,   <Bold  className="w-3.5 h-3.5" />],
+              ['italic',     italic, setItalic, <Italic className="w-3.5 h-3.5" />],
+              ['underline',  uline,  setUline,  <Underline className="w-3.5 h-3.5" />],
+            ] as [string, boolean, (v: boolean) => void, React.ReactNode][]).map(([key, val, setter, icon]) => (
+              <button key={key}
+                onClick={() => { setter(!val); applyToActive({ [key]: !val } as any); }}
+                className={`p-2 rounded-lg border transition cursor-pointer ${
+                  val
+                    ? 'bg-indigo-600 text-white border-indigo-600'
+                    : dk ? 'border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800' : 'border-slate-200 text-slate-500 hover:bg-slate-100'
+                }`}
+              >
+                {icon}
+              </button>
+            ))}
+
+            <div className={`w-px h-6 ${dk?'bg-slate-700':'bg-slate-200'} mx-1`} />
+
+            {/* Align */}
+            {([
+              ['left', <AlignLeft className="w-3.5 h-3.5" />],
+              ['center', <AlignCenter className="w-3.5 h-3.5" />],
+              ['right', <AlignRight className="w-3.5 h-3.5" />],
+            ] as ['left'|'center'|'right', React.ReactNode][]).map(([a, icon]) => (
+              <button key={a}
+                onClick={() => { setAlign(a); applyToActive({ align: a }); }}
+                className={`p-2 rounded-lg border transition cursor-pointer ${
+                  align === a
+                    ? 'bg-indigo-600 text-white border-indigo-600'
+                    : dk ? 'border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800' : 'border-slate-200 text-slate-500 hover:bg-slate-100'
+                }`}
+              >
+                {icon}
+              </button>
+            ))}
+
+            <div className={`w-px h-6 ${dk?'bg-slate-700':'bg-slate-200'} mx-1`} />
+
+            {/* Zoom */}
+            <button onClick={() => setZoom(z => Math.max(0.5, z - 0.1))}
+              className={`p-2 rounded-lg border cursor-pointer ${dk?'border-slate-700 text-slate-400 hover:text-white':'border-slate-200 text-slate-500 hover:bg-slate-100'}`}>
+              <ZoomOut className="w-3.5 h-3.5" />
+            </button>
+            <span className={`text-[11px] font-mono font-bold w-10 text-center ${dk?'text-slate-300':'text-slate-600'}`}>
+              {Math.round(zoom * 100)}%
+            </span>
+            <button onClick={() => setZoom(z => Math.min(1.5, z + 0.1))}
+              className={`p-2 rounded-lg border cursor-pointer ${dk?'border-slate-700 text-slate-400 hover:text-white':'border-slate-200 text-slate-500 hover:bg-slate-100'}`}>
+              <ZoomIn className="w-3.5 h-3.5" />
+            </button>
+
+            <div className="flex-1" />
+
+            {/* Delete active block */}
+            {activeId && (
+              <button onClick={() => deleteBlock(activeId!)}
+                className="p-2 rounded-lg border border-rose-800/50 text-rose-400 hover:bg-rose-950/30 cursor-pointer transition">
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Paper scroll viewport */}
+          <div className={`rounded-2xl border overflow-auto ${card}`}
+            style={{ maxHeight: '74vh', background: dk ? '#0f172a' : '#f1f5f9' }}>
+
+            <div className="flex items-start justify-center py-5 px-4">
+              <div
+                ref={paperRef}
+                onClick={handlePaperClick}
+                style={{
+                  ...paperBgStyle(paper, lineH),
+                  width: PAPER_W,
+                  minHeight: PAPER_H,
+                  position: 'relative',
+                  transform: `scale(${paperScale})`,
+                  transformOrigin: 'top center',
+                  cursor: 'crosshair',
+                  flexShrink: 0,
+                  boxShadow: '0 4px 32px rgba(0,0,0,0.18)',
+                  userSelect: 'none',
+                }}
+              >
+                {/* Red margin line for ruled/yellow */}
+                {(paper === 'ruled' || paper === 'yellow') && (
+                  <div style={{
+                    position: 'absolute', top: 0, bottom: 0,
+                    left: PAPER_MARGIN_L, width: 2,
+                    background: '#fca5a5', pointerEvents: 'none',
+                  }} />
+                )}
+
+                {/* Hint when empty */}
+                {blocks.length === 0 && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '45%', left: '50%',
+                    transform: 'translate(-50%,-50%)',
+                    color: '#94a3b8',
+                    fontSize: 14,
+                    fontFamily: 'sans-serif',
+                    pointerEvents: 'none',
+                    textAlign: 'center',
+                    width: 280,
+                  }}>
+                    <div style={{ fontSize: 32, marginBottom: 8 }}>✍️</div>
+                    <div style={{ fontWeight: 600 }}>{t.clickHint}</div>
+                  </div>
+                )}
+
+                {/* Text blocks */}
+                {blocks.map(b => (
+                  <TextBlockNode
+                    key={b.id}
+                    block={b}
+                    isActive={activeId === b.id}
+                    isDragging={dragState?.id === b.id}
+                    lineH={lineH}
+                    onSelect={() => setActiveId(b.id)}
+                    onDragStart={e => startDrag(e, b.id)}
+                    onTextChange={text => updateBlockText(b.id, text)}
+                    onDelete={() => deleteBlock(b.id)}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Hint */}
+          <p className={`text-center text-[11px] ${dk?'text-slate-600':'text-slate-400'}`}>
+            {currentLang==='uz'
+              ? "Bosib matn yozing • Sarlavhani sudrab joyini o'zgartiring • Ustiga bosib tahrirlang"
+              : currentLang==='ru'
+              ? "Кликните для добавления текста • Перетащите за заголовок • Кликните для редактирования"
+              : "Click to add text • Drag header to reposition • Click to edit"}
           </p>
         </div>
 
-        <div className={`px-4 py-2 flex items-center gap-2 rounded-2xl border text-xs font-bold font-mono ${
-          theme === 'dark' ? 'bg-indigo-950/20 text-indigo-300 border-indigo-500/20' : 'bg-indigo-50 text-indigo-700 border-indigo-100'
-        }`}>
-          <RefreshCw className="w-3.5 h-3.5 animate-spin text-indigo-500" />
-          {t.privateBadge}
+        {/* ── Right export panel ── */}
+        <div className="xl:col-span-3 flex flex-col gap-4">
+          <div className={`rounded-2xl border p-4 space-y-3 ${card}`}>
+            <p className={`text-[11px] font-black font-mono uppercase tracking-widest mb-1 ${dk?'text-slate-400':'text-slate-500'}`}>
+              {currentLang==='uz'
+                ? 'Eksport va Chop Etish'
+                : currentLang==='ru' ? 'Экспорт и Печать' : 'Export & Print'}
+            </p>
+
+            <button onClick={handlePrint}
+              className="w-full py-3 flex items-center justify-center gap-2 text-xs font-black rounded-xl bg-gradient-to-r from-slate-700 to-slate-800 hover:from-slate-600 text-white cursor-pointer transition shadow">
+              <Printer className="w-4 h-4" />
+              {t.print}
+            </button>
+
+            <button onClick={handleExportPdf}
+              className="w-full py-3 flex items-center justify-center gap-2 text-xs font-black rounded-xl bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 text-white cursor-pointer transition shadow-lg shadow-rose-500/20">
+              <FileDown className="w-4 h-4" />
+              {t.exportPdf}
+            </button>
+
+            <button onClick={handleExportPng}
+              className="w-full py-3 flex items-center justify-center gap-2 text-xs font-black rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 text-white cursor-pointer transition shadow-lg shadow-purple-500/20">
+              <Download className="w-4 h-4" />
+              {t.exportPng}
+            </button>
+
+            <button onClick={handleExportDocx}
+              className="w-full py-3 flex items-center justify-center gap-2 text-xs font-black rounded-xl bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 text-white cursor-pointer transition shadow-lg shadow-blue-500/20">
+              <FileDown className="w-4 h-4" />
+              {t.exportDocx}
+            </button>
+          </div>
+
+          {/* Block count info */}
+          {blocks.length > 0 && (
+            <div className={`rounded-2xl border p-4 text-center ${card}`}>
+              <div className={`text-3xl font-black ${dk?'text-white':'text-slate-900'}`}>{blocks.length}</div>
+              <div className={`text-xs mt-0.5 ${dk?'text-slate-400':'text-slate-500'}`}>
+                {currentLang==='uz' ? 'matn blok' : currentLang==='ru' ? 'текстовых блоков' : 'text blocks'}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Main Double Grid Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-fade-in text-left">
-        
-        {/* Left Column Controls */}
-        <div className="lg:col-span-5 space-y-6">
-          
-          {/* 1. Word / TXT File Dragger Importer */}
-          <div className={`p-6 rounded-3xl border transition ${
-            theme === 'dark' ? 'bg-slate-950/45 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
-          }`}>
-            <div className="flex items-center justify-between mb-3.5">
-              <span className="text-xs font-black font-mono text-slate-400 uppercase tracking-widest flex items-center gap-1.5/2">
-                <UploadCloud className="w-4.5 h-4.5 text-indigo-500" />
-                {t.hwUploadTitle}
-              </span>
-            </div>
-            
-            <div 
-              onClick={() => fileInputRef.current?.click()}
-              className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition group relative ${
-                theme === 'dark' 
-                  ? 'border-slate-800 hover:border-slate-600 bg-slate-900/10 hover:bg-slate-900/20' 
-                  : 'border-slate-200 hover:border-slate-300 bg-slate-50 hover:bg-slate-100/60'
-              }`}
-            >
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                className="hidden"
-                accept=".docx,.pdf,.txt"
-              />
-              <UploadCloud className="w-8 h-8 text-indigo-500 group-hover:scale-110 transition mx-auto mb-2" />
-              <p className={`text-xs font-bold ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>
-                {isUploading ? t.hwUploadReading : t.hwUploadDropzone}
-              </p>
-              <span className="text-[10px] text-slate-500 block mt-1">
-                Max size: 10MB. 100% offline document translation.
-              </span>
-            </div>
+      {/* Hidden canvas for export */}
+      <canvas ref={canvasRef} className="hidden" />
 
-            {/* Upload notifications */}
-            {uploadError && (
-              <div className="mt-3 p-3 rounded-xl bg-rose-500/10 border border-rose-500/15 text-rose-400 text-xs flex items-center justify-between gap-1">
-                <span className="font-semibold">{uploadError}</span>
-                <button onClick={() => setUploadError('')} className="p-0.5 hover:bg-rose-500/10 rounded-lg cursor-pointer">
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            )}
-
-            {uploadSuccess && (
-              <div className="mt-3 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/15 text-emerald-400 text-xs flex items-center justify-between gap-1">
-                <span className="font-semibold">{uploadSuccess}</span>
-                <button onClick={() => setUploadSuccess('')} className="p-0.5 hover:bg-emerald-500/10 rounded-lg cursor-pointer">
-                  <Check className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* 2. Styling configuration controls */}
-          <div className={`p-6 rounded-3xl border ${
-            theme === 'dark' ? 'bg-slate-950/45 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
-          }`}>
-            <div className="flex items-center gap-2.5 mb-4">
-              <Sliders className="w-5 h-5 text-indigo-500" />
-              <h3 className={`text-base font-bold font-display ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
-                {t.hwSettings}
-              </h3>
-            </div>
-
-            <div className="space-y-4">
-              {/* Font chooser */}
-              <div>
-                <label className="text-[11px] font-bold text-slate-400 font-mono block mb-2 uppercase">{t.hwFontFamily}</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { id: 'Caveat', name: 'Caveat (Lotin & Kirill)' },
-                    { id: 'Marck Script', name: 'Marck Script (Nozik)' },
-                    { id: 'Bad Script', name: 'Bad Script (Tabiiy Cursive)' }
-                  ].map((f) => (
-                    <button
-                      key={f.id}
-                      onClick={() => setHwFont(f.id as any)}
-                      className={`p-2.5 text-[11px] font-bold border rounded-xl leading-tight transition cursor-pointer flex items-center justify-center text-center ${
-                        hwFont === f.id
-                          ? 'bg-indigo-600 text-white border-indigo-600 shadow'
-                          : theme === 'dark' 
-                            ? 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white' 
-                            : 'bg-white text-slate-650 border-slate-200 hover:bg-slate-50'
-                      }`}
-                    >
-                      {f.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Paper Background Style chooser */}
-              <div>
-                <label className="text-[11px] font-bold text-slate-400 font-mono block mb-2 uppercase">{t.hwPaperType}</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { id: 'ruled', name: t.hwPaperRuled },
-                    { id: 'grid', name: t.hwPaperGrid },
-                    { id: 'blank', name: t.hwPaperBlank },
-                    { id: 'yellow', name: t.hwPaperLegal }
-                  ].map((p) => (
-                    <button
-                      key={p.id}
-                      onClick={() => setHwPaper(p.id as any)}
-                      className={`p-2 text-xs font-bold border rounded-xl transition cursor-pointer ${
-                        hwPaper === p.id
-                          ? 'bg-indigo-650 text-white border-indigo-650 shadow'
-                          : theme === 'dark'
-                            ? 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
-                            : 'bg-white text-slate-650 border-slate-200 hover:bg-slate-50'
-                      }`}
-                    >
-                      {p.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Inks colors chooser */}
-              <div>
-                <label className="text-[11px] font-bold text-slate-400 font-mono block mb-2 uppercase">{t.hwPenColor}</label>
-                <div className="flex flex-wrap items-center gap-2">
-                  {[
-                    { code: '#2563eb', label: t.hwPenBlue, bg: 'bg-blue-600' },
-                    { code: '#1e3a8a', label: t.hwPenRoyalBlue, bg: 'bg-blue-900' },
-                    { code: '#111827', label: t.hwPenBlack, bg: 'bg-slate-900' },
-                    { code: '#dc2626', label: t.hwPenRed, bg: 'bg-red-600' }
-                  ].map((color) => (
-                    <button
-                      key={color.code}
-                      onClick={() => setHwPen(color.code as any)}
-                      className={`px-3 py-2 flex items-center gap-2 text-xs font-bold border rounded-xl transition cursor-pointer hover:scale-102 ${
-                        hwPen === color.code
-                          ? 'border-indigo-505 bg-indigo-500/5 ring-1 ring-indigo-500/40'
-                          : theme === 'dark' ? 'border-slate-800 bg-slate-900 text-slate-400 text-slate-400/90' : 'border-slate-200 bg-white text-slate-650 hover:bg-slate-50'
-                      }`}
-                      title={color.label}
-                    >
-                      <span className={`w-3 h-3 rounded-full ${color.bg}`} />
-                      <span className="text-[10px]">{color.label.split(' ')[0]}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Scaling and adjustments */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-[10px] font-bold text-slate-400 font-mono block uppercase">
-                    {t.hwFontSize}: {hwSize}px
-                  </label>
-                  <input
-                    type="range"
-                    min={12}
-                    max={32}
-                    value={hwSize}
-                    onChange={(e) => setHwSize(parseInt(e.target.value))}
-                    className="w-full accent-indigo-500 mt-2 cursor-col-resize"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-bold text-slate-400 font-mono block uppercase">
-                    {t.hwJitter}: {hwJitterValue}
-                  </label>
-                  <input
-                    type="range"
-                    min={0}
-                    max={5}
-                    value={hwJitterValue}
-                    onChange={(e) => setHwJitterValue(parseInt(e.target.value))}
-                    className="w-full accent-indigo-500 mt-2 cursor-col-resize"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[10px] font-bold text-slate-400 font-mono block uppercase">
-                  {t.hwLineSpacing}: {hwLineSpace}px
-                </label>
-                <input
-                  type="range"
-                  min={22}
-                  max={48}
-                  value={hwLineSpace}
-                  onChange={(e) => setHwLineSpace(parseInt(e.target.value))}
-                  className="w-full accent-indigo-500 mt-2 cursor-col-resize"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* 3. Text composition area */}
-          <div className={`p-6 rounded-3xl border ${
-            theme === 'dark' ? 'bg-slate-950/45 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
-          }`}>
-            <label className="text-xs font-bold text-slate-400 font-mono block mb-2 uppercase">{t.hwInputLabel}</label>
-            <textarea
-              rows={9}
-              value={hwText}
-              onChange={(e) => setHwText(e.target.value)}
-              placeholder="Daftarga yoziladigan xatni yoki matnni kiritishingiz mumkin..."
-              className={`w-full p-4 rounded-2xl border text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 leading-relaxed font-sans ${
-                theme === 'dark' ? 'bg-slate-950/40 border-slate-800 text-white placeholder-slate-600' : 'bg-white border-slate-200 text-slate-900'
-              }`}
-            />
-          </div>
-        </div>
-
-        {/* Right Column virtual canvas viewport */}
-        <div className="lg:col-span-7 space-y-6">
-          <div className={`p-6 rounded-3xl border flex flex-col items-center justify-between min-h-[580px] relative overflow-hidden ${
-            theme === 'dark' ? 'bg-slate-950/45 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
-          }`}>
-            
-            {/* Top row sheet visual settings */}
-            <div className="w-full flex items-center justify-between border-b pb-4 border-slate-150 dark:border-slate-850">
-              <span className="text-xs font-extrabold font-mono text-indigo-500 uppercase tracking-widest flex items-center gap-1.5 font-sans">
-                <PenTool className="w-4 h-4 text-indigo-500" />
-                {t.hwSheetPreview}
-              </span>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setHwZoom(prev => Math.max(0.6, prev - 0.1))}
-                  className={`p-1.5 rounded-xl border cursor-pointer ${theme === 'dark' ? 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white' : 'bg-slate-50 border-slate-150 text-slate-600 hover:text-slate-900'}`}
-                  title="Zoom Out"
-                >
-                  <ZoomOut className="w-3.5 h-3.5" />
-                </button>
-                <span className="text-xs font-bold font-mono px-1">{(hwZoom * 100).toFixed(0)}%</span>
-                <button
-                  onClick={() => setHwZoom(prev => Math.min(1.4, prev + 0.1))}
-                  className={`p-1.5 rounded-xl border cursor-pointer ${theme === 'dark' ? 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white' : 'bg-slate-50 border-slate-150 text-slate-600 hover:text-slate-900'}`}
-                  title="Zoom In"
-                >
-                  <ZoomIn className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-
-            {/* High resolution canvas container */}
-            <div className="w-full py-4 flex items-center justify-center overflow-auto max-h-[510px]">
-              <div 
-                className="rounded-xl overflow-hidden shadow-2xl border transition-transform origin-center border-slate-300 dark:border-slate-800"
-                style={{ transform: `scale(${hwZoom})` }}
-              >
-                <canvas 
-                  ref={sheetCanvasRef}
-                  className="max-w-full block bg-white"
-                  style={{ width: '420px', height: '588px' }} // Interactive visual bounds, real high resolution handles printing!
-                />
-              </div>
-            </div>
-
-            {/* Downloader triggers */}
-            <div className="w-full pt-4 border-t border-slate-200 dark:border-slate-850 space-y-3">
-              <span className="text-[10px] font-black font-mono text-slate-400 uppercase tracking-widest block text-left">
-                {currentLang === 'uz' ? "CHIQARISH VA UKLAB OLISH FORMATLARINI TANLANG:" : currentLang === 'ru' ? "ВЫБЕРИТЕ ФОРМАТ ПРИ ЭКСПОРТЕ:" : "SELECT EXPORT FORMAT FOR DOWNLOAD:"}
-              </span>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                {/* 1. PDF Export */}
-                <button
-                  onClick={handleExportPdf}
-                  className="py-3 px-2 bg-gradient-to-br from-rose-500 to-red-650 hover:from-rose-600 hover:to-red-700 text-white text-[11px] font-black rounded-xl flex flex-col items-center justify-center gap-1.5 cursor-pointer shadow-sm hover:shadow transition duration-200 active:scale-98"
-                >
-                  <FileDown className="w-4 h-4 text-white" />
-                  <span>PDF HAQIQIY DAFTAR</span>
-                </button>
-
-                {/* 2. PNG Export */}
-                <button
-                  onClick={handleExportHandwriteJpg}
-                  className="py-3 px-2 bg-gradient-to-br from-purple-500 to-indigo-650 hover:from-purple-600 hover:to-indigo-750 text-white text-[11px] font-black rounded-xl flex flex-col items-center justify-center gap-1.5 cursor-pointer shadow-sm hover:shadow transition duration-200 active:scale-98"
-                >
-                  <FileDown className="w-4 h-4 text-white" />
-                  <span>PNG RASM FORMATI</span>
-                </button>
-
-                {/* 3. DOCX Export */}
-                <button
-                  onClick={handleExportDocx}
-                  className="py-3 px-2 bg-gradient-to-br from-blue-500 to-cyan-650 hover:from-blue-600 hover:to-cyan-750 text-white text-[11px] font-black rounded-xl flex flex-col items-center justify-center gap-1.5 cursor-pointer shadow-sm hover:shadow transition duration-200 active:scale-98"
-                >
-                  <FileDown className="w-4 h-4 text-white" />
-                  <span>WORD (.DOCX) MATN</span>
-                </button>
-              </div>
-
-              <p className={`text-[10px] text-center italic ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
-                {currentLang === 'uz' 
-                  ? "Word shaklida yuklasangiz, kelgusida matnni o'zingiz xohlagancha o'zgartirishingiz mumkin." 
-                  : currentLang === 'ru' 
-                    ? "Скачивая в формате Word, вы всегда сможете свободно изменить текст позже." 
-                    : "Downloading in Word format lets you customize and edit the text easily later."}
-              </p>
-            </div>
-
-          </div>
-        </div>
+      {/* Privacy notice */}
+      <div className={`p-3.5 rounded-2xl border flex items-start gap-2.5 text-xs ${dk?'bg-slate-950/20 border-slate-800 text-slate-500':'bg-slate-50 border-slate-200 text-slate-500'}`}>
+        <AlertCircle className="w-4 h-4 text-indigo-500 shrink-0 mt-0.5" />
+        <span>{t.privacy}</span>
       </div>
 
-      {/* Security Info footer notice */}
-      <div className={`p-4 rounded-2xl border flex items-start gap-3 mt-4 text-xs font-medium max-w-4xl mx-auto leading-relaxed ${
-        theme === 'dark' ? 'bg-slate-950/20 border-slate-800 text-slate-400' : 'bg-slate-100 border-slate-200/80 text-slate-650'
-      }`}>
-        <AlertCircle className="w-4.5 h-4.5 text-indigo-500 shrink-0 mt-0.5" />
-        <p className="font-sans text-left">
-          {t.laNotice}
-        </p>
+      {/* Invisible font preloader */}
+      <div style={{ position:'absolute', opacity:0, pointerEvents:'none', width:1, height:1, overflow:'hidden' }}>
+        <span style={{ fontFamily:'"Caveat"' }}>ўғқҳ ЎҒҚҲ qolyozma</span>
+        <span style={{ fontFamily:'"Marck Script"' }}>ўғқҳ ЎҒҚҲ qolyozma</span>
+        <span style={{ fontFamily:'"Bad Script"' }}>ўғқҳ ЎҒҚҲ qolyozma</span>
       </div>
+    </div>
+  );
+}
 
-      {/* Invisible Cyrillic and Uzbek characters force preloader to ensure canvas drawing picks up handwriting woff2 subsets immediately */}
-      <div 
-        style={{ 
-          position: 'absolute', 
-          opacity: 0, 
-          pointerEvents: 'none', 
-          width: '1px', 
-          height: '1px', 
-          overflow: 'hidden' 
+// ─── TextBlock Node ────────────────────────────────────────────────────────────
+
+interface TBNodeProps {
+  block: TextBlock;
+  isActive: boolean;
+  isDragging: boolean;
+  lineH: number;
+  onSelect: () => void;
+  onDragStart: (e: React.MouseEvent) => void;
+  onTextChange: (t: string) => void;
+  onDelete: () => void;
+}
+
+const TextBlockNode: React.FC<TBNodeProps> = function TextBlockNode({ block: b, isActive, isDragging, lineH, onSelect, onDragStart, onTextChange, onDelete }) {
+  const taRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (isActive && taRef.current) {
+      taRef.current.focus();
+    }
+  }, [isActive]);
+
+  const textStyle: React.CSSProperties = {
+    fontFamily: `"${b.fontFamily}", cursive`,
+    fontSize: b.fontSize,
+    color: b.color,
+    fontWeight: b.bold ? 'bold' : 'normal',
+    fontStyle: b.italic ? 'italic' : 'normal',
+    textDecoration: b.underline ? 'underline' : 'none',
+    textAlign: b.align,
+    lineHeight: `${lineH}px`,
+  };
+
+  return (
+    <div
+      data-block-id={b.id}
+      onClick={e => { e.stopPropagation(); onSelect(); }}
+      style={{
+        position: 'absolute',
+        left: b.x,
+        top: b.y,
+        width: b.w,
+        zIndex: isActive ? 20 : 10,
+        outline: isActive ? '2px solid #6366f1' : isDragging ? '2px dashed #6366f1' : '1px dashed transparent',
+        borderRadius: 4,
+      }}
+    >
+      {/* Drag handle */}
+      {isActive && (
+        <div
+          onMouseDown={onDragStart}
+          style={{
+            position: 'absolute',
+            top: -22,
+            left: 0,
+            right: 0,
+            height: 20,
+            background: '#4f46e5',
+            borderRadius: '4px 4px 0 0',
+            cursor: 'grab',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingInline: 6,
+            fontSize: 10,
+            color: '#fff',
+            fontFamily: 'sans-serif',
+            userSelect: 'none',
+          }}
+        >
+          <span style={{ display:'flex', alignItems:'center', gap:4 }}>
+            <Move style={{ width:12, height:12 }} />
+            {b.fontFamily}
+          </span>
+          <button
+            onMouseDown={e => { e.stopPropagation(); onDelete(); }}
+            style={{ background:'transparent', border:'none', color:'#fca5a5', cursor:'pointer', padding:'2px 4px', borderRadius:3, lineHeight:1 }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      <textarea
+        ref={taRef}
+        value={b.text}
+        onChange={e => onTextChange(e.target.value)}
+        onMouseDown={e => e.stopPropagation()}
+        onClick={e => e.stopPropagation()}
+        rows={Math.max(1, Math.ceil(b.text.length / 40) + 1)}
+        style={{
+          ...textStyle,
+          width: '100%',
+          background: 'transparent',
+          border: 'none',
+          resize: 'none',
+          outline: 'none',
+          overflow: 'hidden',
+          display: 'block',
         }}
-      >
-        <span style={{ fontFamily: '"Caveat"' }}>ўғқҳ ЎҒҚҲ аёжзийклмнопрстуфхцчшщъыь</span>
-        <span style={{ fontFamily: '"Marck Script"' }}>ўғқҳ ЎҒҚҲ аёжзийклмнопрстуфхцчшщъыь</span>
-        <span style={{ fontFamily: '"Bad Script"' }}>ўғқҳ ЎҒҚҲ аёжзийклмнопрстуфхцчшщъыь</span>
-      </div>
-
+        placeholder={isActive ? '...' : ''}
+      />
     </div>
   );
 }

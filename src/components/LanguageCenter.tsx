@@ -304,8 +304,8 @@ export default function LanguageCenter({ currentLang, onFileProcessed, theme = '
                 <select
                   value={sourceLang}
                   onChange={(e: any) => setSourceLang(e.target.value)}
-                  className={`bg-transparent text-xs font-bold border-none focus:ring-0 cursor-pointer py-1.5 px-3 ${
-                    theme === 'dark' ? 'text-slate-350' : 'text-slate-700'
+                  className={`premium-select text-xs font-bold border-slate-200 focus:ring-0 cursor-pointer py-2 px-3 ${
+                    theme === 'dark' ? 'text-slate-200' : 'text-slate-700'
                   }`}
                 >
                   <option value="uz">O'zbekcha</option>
@@ -318,8 +318,8 @@ export default function LanguageCenter({ currentLang, onFileProcessed, theme = '
                 <select
                   value={targetLang}
                   onChange={(e: any) => setTargetLang(e.target.value)}
-                  className={`bg-transparent text-xs font-bold border-none focus:ring-0 cursor-pointer py-1.5 px-3 ${
-                    theme === 'dark' ? 'text-slate-350' : 'text-slate-700'
+                  className={`premium-select text-xs font-bold border-slate-200 focus:ring-0 cursor-pointer py-2 px-3 ${
+                    theme === 'dark' ? 'text-slate-200' : 'text-slate-700'
                   }`}
                 >
                   <option value="ru">Русский</option>
@@ -485,36 +485,24 @@ export default function LanguageCenter({ currentLang, onFileProcessed, theme = '
               <div className={`flex flex-wrap items-center gap-1 bg-slate-100 dark:bg-slate-900/60 p-1.5 rounded-xl border ${
                 theme === 'dark' ? 'border-slate-800' : 'border-slate-200 shadow-inner'
               }`}>
-                <button
-                  onClick={() => setPolishStyle('official')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer ${
-                    polishStyle === 'official' 
-                      ? 'bg-indigo-600 text-white shadow-sm' 
-                      : 'text-slate-500 hover:text-slate-850 dark:text-slate-400 dark:hover:text-slate-200'
-                  }`}
-                >
-                  {t.styleOfficial}
-                </button>
-                <button
-                  onClick={() => setPolishStyle('literary')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer ${
-                    polishStyle === 'literary' 
-                      ? 'bg-indigo-600 text-white shadow-sm' 
-                      : 'text-slate-500 hover:text-slate-850 dark:text-slate-400 dark:hover:text-slate-200'
-                  }`}
-                >
-                  {t.styleLiterary || 'Adabiy'}
-                </button>
-                <button
-                  onClick={() => setPolishStyle('spellcheck')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer ${
-                    polishStyle === 'spellcheck' 
-                      ? 'bg-indigo-600 text-white shadow-sm' 
-                      : 'text-slate-550 hover:text-slate-850 dark:text-slate-400 dark:hover:text-slate-200'
-                  }`}
-                >
-                  {t.styleSpellcheck}
-                </button>
+                {([
+                  { id: 'official', label: t.styleOfficial },
+                  { id: 'literary', label: t.styleLiterary || 'Adabiy' },
+                  { id: 'conversational', label: currentLang === 'uz' ? "Do'stona" : currentLang === 'ru' ? 'Разговорный' : 'Conversational' },
+                  { id: 'spellcheck', label: t.styleSpellcheck },
+                ] as const).map((style) => (
+                  <button
+                    key={style.id}
+                    onClick={() => setPolishStyle(style.id)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer ${
+                      polishStyle === style.id
+                        ? 'bg-indigo-600 text-white shadow-sm'
+                        : 'text-slate-500 hover:text-slate-850 dark:text-slate-400 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    {style.label}
+                  </button>
+                ))}
               </div>
             </div>
 

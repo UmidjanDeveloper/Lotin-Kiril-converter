@@ -116,96 +116,207 @@ export default function DocumentCenter({ currentLang, theme = 'dark', onSendToHa
     const cleanDetail = getCleanValue(detail, defaults.detail);
     const dateStr = new Date().toLocaleDateString('uz-UZ');
 
+    const pad = (s: string, n: number) => s.padStart(n);
+    const yr = new Date().getFullYear();
+
     switch (type) {
-      case 'ariza':
-        let arizaBody = cleanDetail;
-        arizaBody = arizaBody.replace(/\.?\s*so'rayman\.?\s*$/i, '').trim();
-        return `                                            ${cleanTo}
-                                            ${cleanFrom}
+      case 'ariza': {
+        const body = cleanDetail.replace(/\.?\s*so['']rayman\.?\s*$/i, '').trim();
+        return [
+          '',
+          pad(cleanTo, 70),
+          pad('', 70),
+          pad(cleanFrom + ' dan', 70),
+          '',
+          '',
+          '                                       A R I Z A',
+          '',
+          '',
+          `    Hurmatli rahbar,`,
+          '',
+          `    Sizdan ${body.charAt(0).toLowerCase() + body.slice(1)}ni so'rayman.`,
+          '',
+          `    Ushbu arizamni ijobiy ko'rib chiqishingizni va qonun hujjatlari`,
+          `    asosida hal etishingizni so'rayman.`,
+          '',
+          '',
+          `    ${dateStr}                                    Imzo: ____________________`,
+          `                                                  ${cleanFrom}`,
+        ].join('\n');
+      }
 
-                                   ARIZA
+      case 'tushuntirish': {
+        return [
+          '',
+          pad(cleanTo, 70),
+          pad('', 70),
+          pad(cleanFrom + ' dan', 70),
+          '',
+          '',
+          '                                 T U S H U N T I R I S H   X A T I',
+          '',
+          '',
+          `    Men, ${cleanFrom}, quyidagilarni tushuntiraman:`,
+          '',
+          `    ${cleanDetail}.`,
+          '',
+          `    Keltirilgan holatlar haqiqatga to'liq mos ekanligini, bu holat`,
+          `    iloji boricha tezda bartaraf etilishini va bundan buyon bunday`,
+          `    kamchiliklar takrorlanmasligini kafolatlayman.`,
+          '',
+          '',
+          `    ${dateStr}                                    Imzo: ____________________`,
+          `                                                  ${cleanFrom}`,
+        ].join('\n');
+      }
 
-       Sizdan, ${arizaBody} so'rayman.
+      case 'tavsifnoma': {
+        return [
+          '',
+          '                                      T A V S I F N O M A',
+          '',
+          '',
+          `    Ushbu tavsifnoma ${cleanFrom} haqida ${cleanTo}`,
+          `    taqdim etish uchun berildi.`,
+          '',
+          `    ${cleanDetail}.`,
+          '',
+          `    Xodim o'z faoliyati davomida o'zini mas'uliyatli, intizomli va`,
+          `    bilimdon mutaxassis sifatida namoyon etdi. Jamoada hurmatga sazovor`,
+          `    bo'lib, qo'yilgan vazifalarni muddatida va sifatli bajaradi.`,
+          '',
+          `    Ushbu tavsifnoma uning shaxsiy so'roviga binoan berildi.`,
+          '',
+          '',
+          `    ${dateStr}`,
+          '',
+          `    Rahbar: ____________________          M.O'`,
+          `             (imzo)       (F.I.O.)`,
+        ].join('\n');
+      }
 
-       Ariza mazmuni qonuniy va rasmiy munosabatlar qoidalariga rioya qilgan holda tuzildi.
+      case 'shartnoma': {
+        return [
+          `    Toshkent shahri                                         ${dateStr}`,
+          '',
+          '',
+          '                             S H A R T N O M A',
+          `                               № _____ / ${yr}`,
+          '',
+          '',
+          `    Biz, bir tomondan — ${cleanTo} (bundan buyon "1-tomon"),`,
+          `    va ikkinchi tomondan — ${cleanFrom} (bundan buyon "2-tomon"),`,
+          `    quyidagilar to'g'risida ushbu shartnomani tuzdik:`,
+          '',
+          '',
+          `    1. SHARTNOMA PREDMETI`,
+          '',
+          `    1.1. ${cleanDetail}.`,
+          '',
+          '',
+          `    2. TOMONLARNING MAJBURIYATLARI`,
+          '',
+          `    2.1. 1-tomon o'z zimmasidagi barcha majburiyatlarni o'z vaqtida`,
+          `         bajarish majburiyatini oladi.`,
+          `    2.2. 2-tomon belgilangan tartibda to'lovni amalga oshiradi.`,
+          '',
+          '',
+          `    3. NIZOLARNI HAL ETISH TARTIBI`,
+          '',
+          `    3.1. Nizolar muzokaralar yo'li bilan, kerak bo'lganda O'zbekiston`,
+          `         Respublikasi qonunchiligiga muvofiq sudlar orqali hal etiladi.`,
+          '',
+          '',
+          `    4. SHARTNOMA MUDDATI`,
+          '',
+          `    4.1. Shartnoma imzolangan kundan kuchga kiradi va majburiyatlar`,
+          `         to'liq bajarilgunga qadar amal qiladi.`,
+          '',
+          '',
+          `    TOMONLAR REKVIZITLARI VA IMZOLARI:`,
+          '',
+          `    1-TOMON:                                  2-TOMON:`,
+          `    ____________________________              ____________________________`,
+          `    (imzo)  F.I.O.                            (imzo)  F.I.O.`,
+          `    Sana: ________________                    Sana: ________________`,
+        ].join('\n');
+      }
 
-       Sana: ${dateStr}
-       Imzo: _____________________`;
-      case 'tushuntirish':
-        return `                                            ${cleanTo}
-                                            ${cleanFrom}
+      case 'bildirgi': {
+        return [
+          '',
+          pad(cleanTo, 70),
+          pad('', 70),
+          pad(cleanFrom + ' dan', 70),
+          '',
+          '',
+          '                              X I Z M A T   X A T I   (BILDIRGI)',
+          '',
+          '',
+          `    Sizga quyidagilarni ma'lum qilaman:`,
+          '',
+          `    ${cleanDetail}.`,
+          '',
+          `    Yuqoridagi holatni e'tiboringizga havola etib, tegishli choralar`,
+          `    ko'rishingizni so'rayman.`,
+          '',
+          '',
+          `    ${dateStr}                                    Imzo: ____________________`,
+          `                                                  ${cleanFrom}`,
+        ].join('\n');
+      }
 
-                              TUSHUNTIRISH XATI
+      case 'malumotnoma': {
+        return [
+          '',
+          `    Tashkilot/Muassasa nomi: ________________________________________`,
+          `    Manzil: _________________________________________________________`,
+          `    Tel: ________________________    Raqam: _____ / ${yr}`,
+          '',
+          '',
+          '                                 M A \'L U M O T N O M A',
+          '',
+          '',
+          `    Ushbu ma'lumotnoma ${cleanFrom} shaxsiga tegishli bo'lib,`,
+          `    ${cleanTo} taqdim etish uchun berilgan.`,
+          '',
+          `    ${cleanDetail}.`,
+          '',
+          `    Ma'lumotnoma uning shaxsiy so'roviga binoan va tegishli`,
+          `    hujjatlar asosida berildi.`,
+          '',
+          '',
+          `    ${dateStr}`,
+          '',
+          `    Mas'ul xodim: ____________________          M.O'`,
+          `                   (imzo)   (F.I.O.)`,
+        ].join('\n');
+      }
 
-      Men, ushbu tushuntirish xatini yozib shuni ma'lum qilamanki, ${cleanDetail}.
-
-      Keltirilgan holatlar haqiqat ekanligini tasdiqlayman va kelgusida bunday kamchiliklar takrorlanmasligiga va'da beraman.
-
-      Sana: ${dateStr}
-      Imzo: _____________________`;
-      case 'tavsifnoma':
-        return `                                  TAVSIFNOMA
-                              (Xodim tavsifnomasi)
-
-      Ushbu tavsifnoma ${cleanTo} taqdim etish uchun ${cleanFrom} tomonidan berildi.
-
-      Xodim to'g'risida ma'lumot: ${cleanDetail}.
-
-      Mazkur tavsifnoma uning talabiga binoan berildi.
-
-      Sana: ${dateStr}
-      Boshqaruv imzosi: _____________________`;
-      case 'shartnoma':
-        return `                                  SHARTNOMA
-                              (Oldi-sotdi bitimi)
-
-      Toshkent shahri                                                   Sana: ${dateStr}
-
-      Biz, bir tomondan ${cleanTo}, va ikkinchi tomondan ${cleanFrom}, kelishilgan holda ushbu shartnomani imzoladik:
-
-      1. Shartnoma predmeti: ${cleanDetail}.
-
-      2. Bitim bo'yicha majburiyatlar to'liq va o'z vaqtida bajarilishiga tomonlar kafolat beradilar.
-
-      Tomonlar imzolari:
-      Sotuvchi: _________________            Sotib oluvchi: _________________`;
-      case 'bildirgi':
-        return `                                            ${cleanTo}
-                                            ${cleanFrom}
-
-                                  BILDIRGI
-                             (Doklad xati)
-
-      Sizga shuni ma'lum qilamanki, ${cleanDetail}.
-
-      Yuqoridagilarni inobatga olgan holda, zarur choralar ko'rishingizni so'rayman.
-
-      Sana: ${dateStr}
-      Xodim imzosi: _____________________`;
-      case 'malumotnoma':
-        return `                                  MA'LUMOTNOMA
-
-      Ushbu ma'lumotnoma ${cleanTo} taqdim etish uchun ${cleanFrom} muomalasiga binoan berildi.
-
-      Tarkibi: ${cleanDetail}.
-
-      Sana: ${dateStr}
-      Mas'ul xodim imzosi: _____________________
-      M.O'. (Muhra o'rniga)`;
       case 'free':
-      default:
-        return `                                            ${cleanTo}
-                                            ${cleanFrom}
-
-                                RASMIY HUJJAT
-
-      Murojaat mazmuni:
-      ${cleanDetail}
-
-      Ushbu hujjat professional tarzda tizim yordamida shakllantirilgan.
-
-      Sana: ${dateStr}
-      Imzo: _____________________`;
+      default: {
+        return [
+          '',
+          pad(cleanTo, 70),
+          pad('', 70),
+          pad(cleanFrom + ' dan', 70),
+          '',
+          '',
+          '                                    R A S M I Y   M U R O J A A T',
+          '',
+          '',
+          `    Hurmatli rahbar,`,
+          '',
+          `    ${cleanDetail}.`,
+          '',
+          `    Ushbu murojaatni ko'rib chiqib, tegishli qaror qabul qilishingizni`,
+          `    iltimoslar bilan so'rayman.`,
+          '',
+          '',
+          `    ${dateStr}                                    Imzo: ____________________`,
+          `                                                  ${cleanFrom}`,
+        ].join('\n');
+      }
     }
   };
 
@@ -3166,8 +3277,8 @@ export default function DocumentCenter({ currentLang, theme = 'dark', onSendToHa
                         setNumbersPos(e.target.value);
                         setSuccessDownloadUrl(null);
                       }}
-                      className={`w-full text-xs px-3 py-2.5 border rounded-xl ${
-                        theme === 'dark' ? 'bg-slate-900 border-slate-800 text-white' : 'bg-slate-50 border-slate-200'
+                      className={`w-full premium-select text-xs px-3 py-2.5 border rounded-xl ${
+                        theme === 'dark' ? 'text-white' : 'text-slate-900'
                       }`}
                     >
                       <option value="bottom-right">Varaqning pastki o'ng burchagida</option>
@@ -3596,7 +3707,7 @@ export default function DocumentCenter({ currentLang, theme = 'dark', onSendToHa
                           <select
                             value={newFieldType}
                             onChange={(e: any) => setNewFieldType(e.target.value)}
-                            className={`px-3 py-2 border rounded-xl text-xs ${theme === 'dark' ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'}`}
+                            className={`premium-select px-3 py-2 border rounded-xl text-xs ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}
                           >
                             <option value="text">Matn</option>
                             <option value="checkbox">Chekbox</option>

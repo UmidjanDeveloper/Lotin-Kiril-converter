@@ -70,7 +70,9 @@ export default function PricingSection({ currentLang, onUpgradeSuccess, isPremiu
   };
 
   return (
-    <div className="space-y-8 animate-slide-up relative">
+    <div className="space-y-8 animate-slide-up relative overflow-hidden">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-44 bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.15),transparent_32%)]" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-[radial-gradient(circle_at_bottom,_rgba(16,185,129,0.12),transparent_30%)]" />
       {/* Visual interactive Upgrade success Modal replacing standard window.alert() */}
       {showUpgradeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
@@ -83,14 +85,14 @@ export default function PricingSection({ currentLang, onUpgradeSuccess, isPremiu
             >
               <X className="w-5 h-5" />
             </button>
-            <div className="w-16 h-16 bg-indigo-500/10 text-indigo-505 rounded-full flex items-center justify-center mx-auto border border-indigo-500/20">
-              <Star className="w-8 h-8 fill-indigo-500/20" />
+            <div className="w-16 h-16 bg-indigo-500/10 text-indigo-500 rounded-full flex items-center justify-center mx-auto border border-indigo-500/20 shadow-lg shadow-indigo-500/10">
+              <Star className="w-8 h-8 text-indigo-500" />
             </div>
             <div>
               <h3 className={`text-lg font-black font-display ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
                 {l.successTitle}
               </h3>
-              <p className={`text-xs sm:text-sm mt-1.5 leading-relaxed ${theme === 'dark' ? 'text-slate-400' : 'text-slate-650'}`}>
+              <p className={`text-xs sm:text-sm mt-1.5 leading-relaxed ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
                 {t.paymentSimulated}
               </p>
             </div>
@@ -109,10 +111,10 @@ export default function PricingSection({ currentLang, onUpgradeSuccess, isPremiu
         <h2 className={`text-2xl sm:text-3xl font-black font-display tracking-tight flex items-center justify-center gap-2 ${
           theme === 'dark' ? 'text-white' : 'text-slate-900'
         }`}>
-          <Zap className="w-6 h-6 text-indigo-505 dark:text-indigo-400 fill-indigo-400/20" />
+          <Zap className="w-6 h-6 text-indigo-500 dark:text-indigo-400 fill-indigo-400/20" />
           {t.pricingTitle}
         </h2>
-        <p className={`text-xs sm:text-sm ${theme === 'dark' ? 'text-slate-400' : 'text-slate-650'}`}>
+        <p className={`text-xs sm:text-sm ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
           {t.pricingDesc}
         </p>
       </div>
@@ -120,15 +122,15 @@ export default function PricingSection({ currentLang, onUpgradeSuccess, isPremiu
       {/* Grid of plans */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto items-stretch">
         {/* FREE PLAN */}
-        <div className={`border rounded-3xl p-7 flex flex-col justify-between shadow-xl relative overflow-hidden transition duration-300 ${
+        <div className={`border rounded-[2rem] p-7 flex flex-col justify-between shadow-xl relative overflow-hidden transition duration-300 ${
           theme === 'dark' 
-            ? 'bg-slate-950/30 border-slate-850 shadow-black/40' 
+            ? 'bg-slate-950/30 border-slate-800/70 shadow-black/40' 
             : 'bg-white border-slate-200 shadow-gray-100/30'
         }`}>
           <div className="space-y-6">
             <div>
-              <span className="text-[10px] font-mono tracking-widest text-slate-500 uppercase font-black">{l.freeSub}</span>
-              <h3 className={`text-xl font-bold mt-1 font-display ${theme === 'dark' ? 'text-white' : 'text-slate-905'}`}>{t.planFreeName}</h3>
+              <span className="text-[10px] font-mono tracking-widest text-slate-400 uppercase font-black">{l.freeSub}</span>
+              <h3 className={`text-xl font-bold mt-1 font-display ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{t.planFreeName}</h3>
               <p className={`text-xs mt-2 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600 leading-relaxed'}`}>{l.freeDesc}</p>
             </div>
 
@@ -137,7 +139,7 @@ export default function PricingSection({ currentLang, onUpgradeSuccess, isPremiu
             </div>
 
             <div className={`space-y-3.5 pt-4 border-t text-xs ${
-              theme === 'dark' ? 'border-slate-850 text-slate-350' : 'border-slate-150 text-slate-700'
+              theme === 'dark' ? 'border-slate-800/70 text-slate-400' : 'border-slate-150 text-slate-700'
             }`}>
               <div className="flex items-center gap-2.5">
                 <Check className="w-4 h-4 text-emerald-500" />
@@ -164,7 +166,7 @@ export default function PricingSection({ currentLang, onUpgradeSuccess, isPremiu
               className={`w-full py-3.5 text-xs font-bold rounded-xl border disabled:opacity-85 ${
                 theme === 'dark'
                   ? 'bg-white/5 hover:bg-white/10 text-slate-300 border-white/5'
-                  : 'bg-slate-100 hover:bg-slate-200 text-slate-650 border-slate-200'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
               }`}
             >
               {isPremium ? l.freeBadge : t.currentPlan}
@@ -187,37 +189,37 @@ export default function PricingSection({ currentLang, onUpgradeSuccess, isPremiu
                 <Flame className="w-3 h-3 text-indigo-500 dark:text-indigo-400 animate-pulse" />
                 {l.premiumSub}
               </span>
-              <span className="bg-indigo-510 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 text-[10px] font-black uppercase px-2.5 py-1 rounded-md border border-indigo-300 dark:border-indigo-500/40">
+              <span className="bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 text-[10px] font-black uppercase px-2.5 py-1 rounded-md border border-indigo-300 dark:border-indigo-500/40">
                 PRO EDITION
               </span>
             </div>
 
             <div>
-              <h3 className={`text-xl font-bold mt-1 font-display ${theme === 'dark' ? 'text-white' : 'text-slate-905'}`}>{t.planPremiumName}</h3>
-              <p className={`text-xs mt-2 ${theme === 'dark' ? 'text-indigo-200/60' : 'text-slate-650'}`}>{l.premiumDesc}</p>
+              <h3 className={`text-xl font-bold mt-1 font-display ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{t.planPremiumName}</h3>
+              <p className={`text-xs mt-2 ${theme === 'dark' ? 'text-indigo-200/60' : 'text-slate-600'}`}>{l.premiumDesc}</p>
             </div>
 
-            <div className={`text-2xl font-black font-mono ${theme === 'dark' ? 'text-indigo-300' : 'text-indigo-650'}`}>
+            <div className={`text-2xl font-black font-mono ${theme === 'dark' ? 'text-indigo-300' : 'text-indigo-600'}`}>
               {t.planPremiumPrice}
             </div>
 
             <div className={`space-y-3.5 pt-4 border-t text-xs ${
-              theme === 'dark' ? 'border-slate-850 text-slate-350' : 'border-slate-150 text-slate-700 font-medium'
+              theme === 'dark' ? 'border-slate-800/70 text-slate-400' : 'border-slate-150 text-slate-700 font-medium'
             }`}>
               <div className="flex items-center gap-2.5">
-                <Check className="w-4 h-4 text-indigo-505 dark:text-indigo-400" />
+                <Check className="w-4 h-4 text-indigo-500 dark:text-indigo-300" />
                 <span>{t.planPremiumFeature1}</span>
               </div>
               <div className="flex items-center gap-2.5">
-                <Check className="w-4 h-4 text-indigo-505 dark:text-indigo-400" />
+                <Check className="w-4 h-4 text-indigo-500 dark:text-indigo-300" />
                 <span>{t.planPremiumFeature2}</span>
               </div>
               <div className="flex items-center gap-2.5">
-                <Check className="w-4 h-4 text-indigo-505 dark:text-indigo-400" />
+                <Check className="w-4 h-4 text-indigo-500 dark:text-indigo-300" />
                 <span>{t.planPremiumFeature3}</span>
               </div>
               <div className="flex items-center gap-2.5">
-                <Check className="w-4 h-4 text-indigo-505 dark:text-indigo-400" />
+                <Check className="w-4 h-4 text-indigo-500 dark:text-indigo-300" />
                 <span>{t.planPremiumFeature4}</span>
               </div>
             </div>
@@ -233,7 +235,7 @@ export default function PricingSection({ currentLang, onUpgradeSuccess, isPremiu
               <ArrowRight className="w-4 h-4" />
             </button>
             <div className="flex items-center justify-center gap-1.5 text-[10px] font-mono text-slate-500">
-              <Shield className="w-3.5 h-3.5 text-indigo-505 dark:text-indigo-400" />
+              <Shield className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
               <span>{l.paymentStatus}</span>
             </div>
           </div>

@@ -1,0 +1,42 @@
+{
+  "name": "Hujjat.uz — O'zbek Matn va Hujjatlar Markazi",
+  "short_name": "Hujjat.uz",
+  "description": "O'zbekistondagi eng kuchli hujjat va matn stansiyasi. Kirill-Lotin transliteratsiya, AI tarjima, PDF asboblari.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#070c1e",
+  "theme_color": "#4f46e5",
+  "orientation": "any",
+  "scope": "/",
+  "lang": "uz",
+  "categories": ["utilities", "productivity", "education"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Til Markazi",
+      "short_name": "Transliteratsiya",
+      "description": "Kirill ↔ Lotin o'tkazgich",
+      "url": "/?tab=lang"
+    },
+    {
+      "name": "Hujjat Markazi",
+      "short_name": "PDF Asboblari",
+      "description": "PDF merge, split, compress va boshqalar",
+      "url": "/?tab=docs"
+    },
+    {
+      "name": "AI Markazi",
+      "short_name": "AI Chat",
+      "description": "Hujjat tahlil va AI suhbat",
+      "url": "/?tab=ai"
+    }
+  ]
+}

@@ -3,28 +3,139 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Hujjat.uz — Hujjatlar va Matnlar Markazi</title>
-    <!-- Custom Brand Favicon Logo -->
+
+    <!-- ═══════════════════════════════════════════════════════════
+         PRIMARY SEO — Title & Description
+    ═══════════════════════════════════════════════════════════ -->
+    <title>Hujjat.uz — O'zbek Matn va Hujjatlar Markazi | Kirill-Lotin, AI, PDF</title>
+    <meta name="description" content="O'zbekistondagi eng kuchli hujjat va matn stansiyasi. Kirill↔Lotin transliteratsiya, AI tarjima, PDF asboblari, qo'lyozma generator, ariza va shartnoma shablonlari — hammasi bepul va brauzer ichida." />
+    <meta name="keywords" content="hujjat.uz, kirill lotin, o'zbek transliteratsiya, uzbek transliteration, pdf tools, qolyozma, ariza shablon, tarjima, uzbek ai, lotin kiril konverter, hujjat markazi, uzbekiston, uz transliteration" />
+    <meta name="author" content="Hujjat.uz" />
+    <meta name="robots" content="index, follow" />
+    <meta name="language" content="Uzbek" />
+    <meta name="geo.region" content="UZ" />
+    <meta name="geo.country" content="UZ" />
+    <link rel="canonical" href="https://hujjat.uz/" />
+
+    <!-- ═══════════════════════════════════════════════════════════
+         OPEN GRAPH (Facebook / Telegram / LinkedIn)
+    ═══════════════════════════════════════════════════════════ -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://hujjat.uz/" />
+    <meta property="og:title" content="Hujjat.uz — O'zbek Matn va Hujjatlar Markazi" />
+    <meta property="og:description" content="O'zbekistondagi eng kuchli hujjat va matn stansiyasi. Kirill↔Lotin, AI tarjima, PDF, Qo'lyozma — bepul va maxfiy." />
+    <meta property="og:image" content="https://hujjat.uz/og-image.png" />
+    <meta property="og:locale" content="uz_UZ" />
+    <meta property="og:locale:alternate" content="ru_RU" />
+    <meta property="og:locale:alternate" content="en_US" />
+    <meta property="og:site_name" content="Hujjat.uz" />
+
+    <!-- ═══════════════════════════════════════════════════════════
+         TWITTER / X CARD
+    ═══════════════════════════════════════════════════════════ -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Hujjat.uz — O'zbek Matn va Hujjatlar Markazi" />
+    <meta name="twitter:description" content="Kirill↔Lotin, AI tarjima, PDF asboblari, Qo'lyozma generator. Bepul va maxfiy." />
+    <meta name="twitter:image" content="https://hujjat.uz/og-image.png" />
+
+    <!-- ═══════════════════════════════════════════════════════════
+         PWA / INSTALLABILITY
+    ═══════════════════════════════════════════════════════════ -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#4f46e5" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Hujjat.uz" />
+    <meta name="mobile-web-app-capable" content="yes" />
+
+    <!-- ═══════════════════════════════════════════════════════════
+         FAVICONS
+    ═══════════════════════════════════════════════════════════ -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/favicon.svg" />
-    <meta name="theme-color" content="#5c93d1" />
-    <!-- Google Fonts for Cyrillic and Latin Cursive -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=Marck+Script&family=Bad+Script&family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Inject PDFJS from CDN for client-side PDF text translation -->
+
+    <!-- ═══════════════════════════════════════════════════════════
+         JSON-LD STRUCTURED DATA (Google Rich Results)
+    ═══════════════════════════════════════════════════════════ -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Hujjat.uz",
+      "url": "https://hujjat.uz",
+      "description": "O'zbekistondagi eng kuchli hujjat va matn stansiyasi. Kirill-Lotin transliteratsiya, AI tarjima, PDF asboblari, qo'lyozma generator.",
+      "applicationCategory": "UtilitiesApplication",
+      "operatingSystem": "Any",
+      "browserRequirements": "Requires JavaScript. Any modern browser.",
+      "offers": [
+        {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "UZS",
+          "name": "Standart Plan",
+          "description": "Asosiy transliteratsiya, PDF asboblari, qo'lyozma"
+        },
+        {
+          "@type": "Offer",
+          "price": "49000",
+          "priceCurrency": "UZS",
+          "name": "Premium Plan",
+          "description": "Cheksiz AI tarjima, hujjat generatsiya, priority support"
+        }
+      ],
+      "featureList": [
+        "Uzbek Cyrillic to Latin Transliteration",
+        "Latin to Cyrillic Transliteration",
+        "AI-powered Translation (Uzbek, Russian, English, Kazakh, Turkish)",
+        "PDF Merge, Split, Compress, Rotate",
+        "Document Templates (Ariza, Shartnoma, Tavsifnoma)",
+        "Handwriting Studio",
+        "OCR Text Recognition",
+        "100% Browser-based, No File Upload"
+      ],
+      "inLanguage": ["uz", "ru", "en"],
+      "author": {
+        "@type": "Organization",
+        "name": "Hujjat.uz",
+        "url": "https://hujjat.uz"
+      },
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://hujjat.uz/?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         GOOGLE FONTS — Cyrillic + Latin + Handwriting subsets
+    ═══════════════════════════════════════════════════════════ -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=Marck+Script&family=Bad+Script&family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+    <!-- ═══════════════════════════════════════════════════════════
+         EXTERNAL LIBRARIES (CDN)
+    ═══════════════════════════════════════════════════════════ -->
+    <!-- PDF.js for client-side PDF text extraction -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script>
-      // Setup global pdfjs-dist bindings
       window.pdfjsLib = window['pdfjs-dist/build/pdf'];
-      window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+      if (window.pdfjsLib) {
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+      }
     </script>
-    <!-- Inject Tesseract.js for client-side OCR scanned text extraction -->
+    <!-- Tesseract.js for offline OCR -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js"></script>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         PERFORMANCE HINTS
+    ═══════════════════════════════════════════════════════════ -->
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+    <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com" />
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-

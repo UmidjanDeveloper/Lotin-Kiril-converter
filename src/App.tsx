@@ -35,6 +35,9 @@ export default function App() {
   // Routing navigation tab
   const [activeTab, setActiveTab] = useState<'home' | 'lang' | 'docs' | 'ai' | 'prices' | 'opensource'>('home');
 
+  // Developer panel (hidden — double-click copyright to reveal)
+  const [devPanel, setDevPanel] = useState(false);
+
   // Shared Yash Lamba Handwrite integration state
   const [sharedHandwriteText, setSharedHandwriteText] = useState<string>('');
 
@@ -229,11 +232,6 @@ export default function App() {
                   </button>
                 ))}
               </div>
-              {/* Admin provider override */}
-              <div className="hidden sm:flex items-center ml-2">
-                <AdminAIProvider />
-              </div>
-
               {/* Light/Dark Toggle */}
               <button
                 onClick={toggleTheme}
@@ -268,7 +266,16 @@ export default function App() {
                 <Sparkles className="w-3.5 h-3.5 text-indigo-500 fill-indigo-500/20 animate-pulse" />
                 {t.heroSub}
               </span>
-              
+
+              <div className="inline-flex items-center justify-center gap-2 mx-auto rounded-full px-4 py-2 mt-4 text-[11px] uppercase tracking-[0.24em] font-extrabold text-amber-300 bg-amber-500/10 border border-amber-400/20 shadow-sm">
+                <span className="inline-flex h-2 w-2 rounded-full bg-amber-300 animate-pulse" />
+                {currentLang === 'uz'
+                  ? "O'zbekiston uchun yagona premium matn va hujjat stansiyasi"
+                  : currentLang === 'ru'
+                  ? "Единственная premium-платформа для текста и документов в Узбекистане"
+                  : "The #1 premium text & document platform for Uzbekistan"}
+              </div>
+
               <h2 className={`text-3xl sm:text-5xl font-extrabold tracking-tight font-display leading-[1.15] ${
                 theme === 'dark' ? 'text-white' : 'text-slate-900'
               }`}>
@@ -285,13 +292,66 @@ export default function App() {
               }`}>
                 {t.appPositioning}
               </p>
+
+              <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+                <button
+                  onClick={() => setActiveTab('docs')}
+                  className="inline-flex items-center justify-center rounded-full px-5 py-3 text-xs font-bold uppercase tracking-[0.18em] text-white bg-gradient-to-r from-indigo-500 via-violet-600 to-sky-500 shadow-lg shadow-indigo-500/20 transition duration-200 hover:scale-[1.01] hover:shadow-indigo-500/30"
+                >
+                  {t.docCenter}
+                </button>
+                <button
+                  onClick={() => setActiveTab('ai')}
+                  className="inline-flex items-center justify-center rounded-full px-5 py-3 text-xs font-bold uppercase tracking-[0.18em] text-slate-900 bg-white border border-slate-200 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md"
+                >
+                  {t.aiCenter}
+                </button>
+                <button
+                  onClick={() => setActiveTab('prices')}
+                  className="inline-flex items-center justify-center rounded-full px-5 py-3 text-xs font-bold uppercase tracking-[0.18em] text-white bg-emerald-500 hover:bg-emerald-600 transition duration-200 shadow-lg shadow-emerald-500/20"
+                >
+                  {isPremium
+                    ? (currentLang === 'uz' ? 'Premium faollashtirilgan ✓' : currentLang === 'ru' ? 'Premium активирован ✓' : 'Premium Activated ✓')
+                    : t.upgradeBtn}
+                </button>
+              </div>
+
+              <div className="mt-4 flex flex-wrap justify-center gap-2 text-[11px] text-slate-400">
+                {['AI', 'PDF', 'OCR',
+                  currentLang === 'uz' ? "Qo'lyozma" : currentLang === 'ru' ? 'Почерк' : 'Handwrite',
+                  currentLang === 'uz' ? 'Matn' : currentLang === 'ru' ? 'Текст' : 'Text',
+                  currentLang === 'uz' ? 'Tarjima' : currentLang === 'ru' ? 'Перевод' : 'Translation'
+                ].map((chip) => (
+                  <span key={chip} className="rounded-full border border-slate-200 bg-slate-950/5 px-3 py-1 font-semibold text-slate-500 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-300">
+                    {chip}
+                  </span>
+                ))}
+              </div>
+
+              {/* Trust Bar */}
+              <div className="mt-6 flex flex-wrap items-center justify-center gap-4 text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                {[
+                  { icon: '🔒', label: currentLang === 'uz' ? '100% Brauzerda' : currentLang === 'ru' ? '100% В браузере' : '100% In-Browser' },
+                  { icon: '⚡', label: 'Kirill ↔ Lotin' },
+                  { icon: '📄', label: '26+ PDF' + (currentLang === 'uz' ? ' Asbob' : currentLang === 'ru' ? ' Инструментов' : ' Tools') },
+                  { icon: '🤖', label: 'Gemini AI' },
+                  { icon: '✍️', label: currentLang === 'uz' ? "Qo'lyozma" : currentLang === 'ru' ? 'Почерк' : 'Handwriting' },
+                ].map((item) => (
+                  <span key={item.label} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border ${
+                    theme === 'dark' ? 'border-slate-800 bg-slate-900/40' : 'border-slate-200 bg-white shadow-sm'
+                  }`}>
+                    <span>{item.icon}</span>
+                    {item.label}
+                  </span>
+                ))}
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-5xl mx-auto">
-              <div className={`rounded-3xl p-5 border shadow-sm transition duration-300 ${
+              <div className={`rounded-[2rem] p-6 border shadow-xl transition duration-300 backdrop-blur-xl ${
                 theme === 'dark'
-                  ? 'bg-slate-950/60 border-slate-800 hover:border-indigo-500/40 hover:bg-slate-900/80'
-                  : 'bg-white border-slate-200 hover:border-indigo-500/30 hover:bg-indigo-50'
+                  ? 'bg-slate-950/70 border-slate-800/90 hover:border-indigo-500/40 hover:bg-slate-900/85 shadow-indigo-900/20'
+                  : 'bg-white/95 border-slate-200 shadow-slate-200/70 hover:border-indigo-500/30 hover:bg-indigo-50'
               }`}>
                 <div className="flex items-center justify-between mb-4">
                   <div className="text-indigo-500 bg-indigo-500/10 rounded-2xl p-3">
@@ -307,10 +367,10 @@ export default function App() {
                 </p>
               </div>
 
-              <div className={`rounded-3xl p-5 border shadow-sm transition duration-300 ${
+              <div className={`rounded-[2rem] p-6 border shadow-xl transition duration-300 backdrop-blur-xl ${
                 theme === 'dark'
-                  ? 'bg-slate-950/60 border-slate-800 hover:border-emerald-500/40 hover:bg-slate-900/80'
-                  : 'bg-white border-slate-200 hover:border-emerald-500/30 hover:bg-emerald-50'
+                  ? 'bg-slate-950/70 border-slate-800/90 hover:border-emerald-500/40 hover:bg-slate-900/85 shadow-emerald-900/20'
+                  : 'bg-white/95 border-slate-200 shadow-slate-200/70 hover:border-emerald-500/30 hover:bg-emerald-50'
               }`}>
                 <div className="flex items-center justify-between mb-4">
                   <div className="text-emerald-500 bg-emerald-500/10 rounded-2xl p-3">
@@ -326,10 +386,10 @@ export default function App() {
                 </p>
               </div>
 
-              <div className={`rounded-3xl p-5 border shadow-sm transition duration-300 ${
+              <div className={`rounded-[2rem] p-6 border shadow-xl transition duration-300 backdrop-blur-xl ${
                 theme === 'dark'
-                  ? 'bg-slate-950/60 border-slate-800 hover:border-purple-500/40 hover:bg-slate-900/80'
-                  : 'bg-white border-slate-200 hover:border-purple-500/30 hover:bg-purple-50'
+                  ? 'bg-slate-950/70 border-slate-800/90 hover:border-purple-500/40 hover:bg-slate-900/85 shadow-purple-950/20'
+                  : 'bg-white/95 border-slate-200 shadow-slate-200/70 hover:border-purple-500/30 hover:bg-purple-50'
               }`}>
                 <div className="flex items-center justify-between mb-4">
                   <div className="text-purple-500 bg-purple-500/10 rounded-2xl p-3">
@@ -641,11 +701,13 @@ export default function App() {
         </div>
       </main>
 
-      {/* Clean Human-focused footer with translated links and descriptions */}
-      <footer className={`border-t transition-colors duration-300 mt-12 py-8 text-center text-xs backdrop-blur ${
+      {/* Footer */}
+      <footer className={`border-t transition-colors duration-300 mt-12 py-10 text-center text-xs backdrop-blur ${
         theme === 'dark' ? 'border-slate-800 bg-slate-950/45 text-slate-500' : 'border-slate-200/80 bg-white text-slate-600'
       }`}>
-        <div className="max-w-6xl mx-auto px-4 space-y-4">
+        <div className="max-w-6xl mx-auto px-4 space-y-6">
+
+          {/* Navigation links */}
           <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 font-bold text-slate-500 dark:text-slate-400 font-mono">
             <button onClick={() => setActiveTab('home')} className="hover:text-indigo-500 transition cursor-pointer">{t.homeTab}</button>
             <button onClick={() => setActiveTab('lang')} className="hover:text-indigo-500 transition cursor-pointer">{t.langCenter}</button>
@@ -654,9 +716,55 @@ export default function App() {
             <button onClick={() => setActiveTab('opensource')} className="hover:text-indigo-500 transition cursor-pointer">{currentLang === 'uz' ? "Qo'lyozma" : currentLang === 'ru' ? "Почерк" : "Handwrite"}</button>
             <button onClick={() => setActiveTab('prices')} className="hover:text-indigo-500 transition cursor-pointer">{t.pricing}</button>
           </div>
-          <div className="space-y-1">
-            <p className="font-semibold text-slate-600 dark:text-slate-400">© {new Date().getFullYear()} {t.appName} — {t.appSlogan}. {t.footerCopyrightText}</p>
+
+          {/* Divider */}
+          <div className={`border-t ${theme === 'dark' ? 'border-slate-800' : 'border-slate-100'}`} />
+
+          {/* Feature chips */}
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            {[
+              currentLang === 'uz' ? 'Kirill ↔ Lotin' : currentLang === 'ru' ? 'Кирилл ↔ Латин' : 'Cyrillic ↔ Latin',
+              currentLang === 'uz' ? 'AI Tarjima' : currentLang === 'ru' ? 'ИИ Перевод' : 'AI Translation',
+              'PDF Merge / Split',
+              currentLang === 'uz' ? "Qo'lyozma Studio" : currentLang === 'ru' ? 'Студия Почерка' : 'Handwriting Studio',
+              'OCR',
+              currentLang === 'uz' ? 'Ariza Shablonlari' : currentLang === 'ru' ? 'Шаблоны Заявлений' : 'Document Templates',
+            ].map((f) => (
+              <span key={f} className={`text-[10px] font-semibold px-2.5 py-1 rounded-full border ${
+                theme === 'dark' ? 'border-slate-800 text-slate-500' : 'border-slate-200 text-slate-400'
+              }`}>{f}</span>
+            ))}
           </div>
+
+          {/* Copyright + tagline */}
+          <div className="space-y-1.5">
+            <p
+              className="font-semibold text-slate-500 dark:text-slate-400 cursor-default select-none"
+              onDoubleClick={() => setDevPanel(v => !v)}
+              title=""
+            >
+              © {new Date().getFullYear()} <span className="text-indigo-500 font-bold">{t.appName}</span> — {t.appSlogan}.
+            </p>
+            <p className={`text-[11px] ${theme === 'dark' ? 'text-slate-600' : 'text-slate-400'}`}>
+              {currentLang === 'uz'
+                ? "O'zbekiston uchun ❤️ bilan yaratildi. Barcha fayllar brauzeringizda ishlaydi — server yo'q."
+                : currentLang === 'ru'
+                ? "Сделано с ❤️ для Узбекистана. Все файлы обрабатываются в браузере — без сервера."
+                : "Made with ❤️ for Uzbekistan. All files are processed in-browser — no server upload."}
+            </p>
+            <p className={`text-[10px] font-mono ${theme === 'dark' ? 'text-slate-700' : 'text-slate-300'}`}>
+              {t.footerCopyrightText}
+            </p>
+          </div>
+
+          {/* Hidden developer panel — double-click copyright to reveal */}
+          {devPanel && (
+            <div className={`mx-auto max-w-xs p-3 rounded-xl border text-xs ${theme === 'dark' ? 'bg-slate-900 border-slate-700' : 'bg-slate-100 border-slate-300'}`}>
+              <p className="font-mono font-bold text-slate-400 mb-2">AI Provider Override</p>
+              <AdminAIProvider />
+            </div>
+          )}
+
         </div>
       </footer>
     </div>

@@ -17,7 +17,7 @@ export default function AdminAIProvider() {
       <select
         value={provider}
         onChange={(e) => setProvider(e.target.value)}
-        className="text-xs rounded px-2 py-1 bg-transparent border"
+        className="premium-select text-xs rounded-xl px-2 py-2 border"
         title="Override AI provider for frontend requests"
       >
         <option value="">(env default)</option>
