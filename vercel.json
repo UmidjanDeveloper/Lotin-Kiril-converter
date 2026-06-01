@@ -15,5 +15,7 @@
       "src": "/api/ai/(.*)",
       "dest": "/api/gemini/$1"
     }
-  ]
+  ],
+  "buildCommand": "npm run vercel-build",
+  "outputDirectory": "dist"
 }
