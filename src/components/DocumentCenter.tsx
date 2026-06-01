@@ -50,6 +50,8 @@ export default function DocumentCenter({ currentLang, theme = 'dark', onSendToHa
   const [isAiGenerated, setIsAiGenerated] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [generatingDoc, setGeneratingDoc] = useState(false);
+  const [pageMargins, setPageMargins] = useState({ top: 20, right: 25, bottom: 20, left: 25 });
+  const [previewEditing, setPreviewEditing] = useState(false);
 
   // Helper defaults & fallbacks defined inline or outside component
   const getTemplateDefaults = (type: string) => {
@@ -207,6 +209,78 @@ export default function DocumentCenter({ currentLang, theme = 'dark', onSendToHa
     }
   };
 
+  const containsMixedScripts = (text: string) => {
+    const hasLatin = /[A-Za-z]/.test(text);
+    const hasCyrillic = /[А-Яа-яЁё]/.test(text);
+    return hasLatin && hasCyrillic;
+  };
+
+  const createA4PdfBlob = async (text: string) => {
+    const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+    const marginLeft = pageMargins.left;
+    const marginRight = pageMargins.right;
+    const marginTop = pageMargins.top;
+    const marginBottom = pageMargins.bottom;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const contentWidth = pageWidth - marginLeft - marginRight;
+    const fontSize = docPreviewMode === 'handwriting' ? 18 : 12;
+    const lineHeight = fontSize * 0.7;
+
+    doc.setFont('Times', 'Normal');
+    doc.setFontSize(fontSize);
+    doc.setTextColor(docPreviewMode === 'handwriting'
+      ? (handwritingStyle === 'blue' ? '#1d4ed8' : '#1e293b')
+      : '#000000'
+    );
+
+    const rawLines = text.replace(/\r\n/g, '\n').split('\n');
+    let cursorY = marginTop;
+
+    for (const rawLine of rawLines) {
+      const wrapped = doc.splitTextToSize(rawLine || ' ', contentWidth);
+      for (const line of wrapped) {
+        if (cursorY > pageHeight - marginBottom) {
+          doc.addPage();
+          cursorY = marginTop;
+        }
+        doc.text(line, marginLeft, cursorY, { maxWidth: contentWidth });
+        cursorY += lineHeight;
+      }
+    }
+
+    return doc.output('blob');
+  };
+
+  const handlePreviewInput = (event: React.FormEvent<HTMLDivElement>) => {
+    const nextText = (event.currentTarget as HTMLDivElement).innerText;
+    setGeneratedDocText(nextText.replace(/\u00A0/g, ' '));
+    setIsAiGenerated(true);
+  };
+
+  const handleExportPdf = async () => {
+    if (!generatedDocText) return;
+    setIsProcessing(true);
+    setGlobalError('');
+    try {
+      const pdfBlob = await createA4PdfBlob(generatedDocText);
+      const url = URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `hujjat_${selectedTemplate}_${Date.now()}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setSuccessDownloadUrl(url);
+      setSuccessFilename(link.download);
+    } catch (err: any) {
+      console.error(err);
+      setGlobalError('PDF formatiga eksport qilishda xatolik yuz berdi. Iltimos, matnni tekshiring va qayta urinib ko‘ring.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   // Sync draft on load or template switch
   useEffect(() => {
     setDocTo('');
@@ -251,6 +325,15 @@ export default function DocumentCenter({ currentLang, theme = 'dark', onSendToHa
     const apiTo = docTo.trim() || defaults.to;
     const apiFrom = docFrom.trim() || defaults.from;
     const apiDetail = docDetail.trim() || defaults.detail;
+    const combinedInput = `${apiTo} ${apiFrom} ${apiDetail}`;
+
+    if (containsMixedScripts(combinedInput)) {
+      setErrorMessage('Hujjat ichida bir nechta alifbo ishlatilgan. Iltimos, faqat bitta tildagi matnni kiriting yoki keyin hujjatni to`g`ridan-to`g`ri tahrir qiling.');
+      setGeneratedDocText(getLocalDraftText(selectedTemplate, apiTo, apiFrom, apiDetail));
+      setIsGeneratingDocText(false);
+      return;
+    }
+
     try {
       const headers: any = { 'Content-Type': 'application/json' };
       const providerOverride = localStorage.getItem('ai_provider_override');
@@ -298,6 +381,7 @@ export default function DocumentCenter({ currentLang, theme = 'dark', onSendToHa
     
     const isHandwriting = docPreviewMode === 'handwriting';
     const penColor = handwritingStyle === 'blue' ? '#1d4ed8' : '#1e293b';
+    const printPadding = `${pageMargins.top}mm ${pageMargins.right}mm ${pageMargins.bottom}mm ${pageMargins.left}mm`;
 
     printWindow.document.write(`
       <!DOCTYPE html>
@@ -340,7 +424,7 @@ export default function DocumentCenter({ currentLang, theme = 'dark', onSendToHa
               background: white;
               width: 210mm;
               min-height: 297mm;
-              padding: 20mm 25mm 20mm 25mm;
+              padding: ${printPadding};
               box-sizing: border-box;
               border: 1px solid #cbd5e1;
               box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
@@ -1928,6 +2012,14 @@ export default function DocumentCenter({ currentLang, theme = 'dark', onSendToHa
                   <Download className="w-4 h-4" />
                   {generatingDoc ? "Tayyorlanmoqda..." : "Word (.docx) yuklash"}
                 </button>
+                <button
+                  onClick={handleExportPdf}
+                  disabled={isProcessing}
+                  className="px-4 py-2.5 rounded-xl text-xs font-bold cursor-pointer transition flex items-center justify-center gap-2 bg-slate-950 text-white hover:bg-slate-800 disabled:opacity-50 active:scale-95 duration-150"
+                >
+                  <Download className="w-4 h-4 text-white" />
+                  {isProcessing ? "PDF Tayyorlanmoqda..." : "PDF saqlash"}
+                </button>
               </div>
             </div>
           </div>
@@ -1991,6 +2083,33 @@ export default function DocumentCenter({ currentLang, theme = 'dark', onSendToHa
                 🖨️ Chop etish / PDF saqlash
               </button>
 
+              <div className="flex flex-col gap-2 text-xs text-slate-500">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold">Yuqori margin:</span>
+                  <span>{pageMargins.top}mm</span>
+                </div>
+                <input
+                  type="range"
+                  min={10}
+                  max={60}
+                  value={pageMargins.top}
+                  onChange={(e) => setPageMargins(prev => ({ ...prev, top: Number(e.target.value) }))}
+                  className="w-full"
+                />
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold">Chap margin:</span>
+                  <span>{pageMargins.left}mm</span>
+                </div>
+                <input
+                  type="range"
+                  min={10}
+                  max={40}
+                  value={pageMargins.left}
+                  onChange={(e) => setPageMargins(prev => ({ ...prev, left: Number(e.target.value) }))}
+                  className="w-full"
+                />
+              </div>
+
               {generatedDocText && onSendToHandwriting && (
                 <button
                   onClick={() => onSendToHandwriting(generatedDocText)}
@@ -2006,8 +2125,14 @@ export default function DocumentCenter({ currentLang, theme = 'dark', onSendToHa
               theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-slate-50 border-slate-200'
             }`}>
               <div
-                className={`w-[210mm] min-h-[297mm] p-12 sm:p-20 bg-white text-black shadow-inner relative text-left leading-relaxed break-words whitespace-pre-wrap rounded-xl`}
+                contentEditable={true}
+                suppressContentEditableWarning={true}
+                onInput={handlePreviewInput}
+                onFocus={() => setPreviewEditing(true)}
+                onBlur={() => setPreviewEditing(false)}
+                className={`w-[210mm] min-h-[297mm] bg-white text-black shadow-inner relative text-left leading-relaxed break-words whitespace-pre-wrap rounded-xl outline-none ${previewEditing ? 'ring-2 ring-indigo-500' : ''}`}
                 style={{
+                  padding: `${pageMargins.top}mm ${pageMargins.right}mm ${pageMargins.bottom}mm ${pageMargins.left}mm`,
                   fontFamily: docPreviewMode === 'handwriting' ? "'Caveat', cursive" : "'Times New Roman', Times, serif",
                   fontSize: docPreviewMode === 'handwriting' ? "18pt" : "12pt",
                   color: docPreviewMode === 'handwriting' ? (handwritingStyle === 'blue' ? '#1d4ed8' : '#1e293b') : '#000000',
