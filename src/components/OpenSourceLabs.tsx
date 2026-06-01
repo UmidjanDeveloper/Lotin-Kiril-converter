@@ -34,7 +34,7 @@ interface TextBlock {
 }
 
 type PaperType = 'ruled' | 'grid' | 'blank' | 'yellow';
-type FontKey  = 'Caveat' | 'Marck Script' | 'Bad Script';
+type FontKey  = 'Caveat' | 'Kalam' | 'Patrick Hand' | 'Indie Flower' | 'Marck Script' | 'Bad Script' | 'Reenie Beanie' | 'Schoolbell';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -44,9 +44,14 @@ const PAPER_MARGIN_L = 90;
 const PAPER_MARGIN_T = 80;
 
 const FONTS: { id: FontKey; label: string }[] = [
-  { id: 'Caveat',       label: 'Caveat (Standart)'   },
-  { id: 'Marck Script', label: 'Marck Script (Nozik)' },
-  { id: 'Bad Script',   label: 'Bad Script (Kursiv)'  },
+  { id: 'Caveat',       label: 'Caveat'        },
+  { id: 'Kalam',        label: 'Kalam'         },
+  { id: 'Patrick Hand', label: 'Patrick Hand'  },
+  { id: 'Indie Flower', label: 'Indie Flower'  },
+  { id: 'Marck Script', label: 'Marck Script'  },
+  { id: 'Bad Script',   label: 'Bad Script'    },
+  { id: 'Reenie Beanie',label: 'Reenie Beanie' },
+  { id: 'Schoolbell',   label: 'Schoolbell'    },
 ];
 
 const PEN_COLORS = [
@@ -651,10 +656,10 @@ export default function OpenSourceLabs({
             {/* Font */}
             <div>
               <label className={`text-[10px] font-bold font-mono uppercase block mb-1.5 ${dk?'text-slate-500':'text-slate-400'}`}>{t.font}</label>
-              <div className="flex flex-col gap-1.5">
+              <div className="grid grid-cols-2 gap-1.5">
                 {FONTS.map(f => (
                   <button key={f.id} onClick={() => { setFont(f.id); applyToActive({ fontFamily: f.id }); }}
-                    className={`py-1.5 px-3 text-[11px] font-semibold border rounded-xl transition cursor-pointer text-left ${
+                    className={`py-2 px-2 text-[11px] font-semibold border rounded-xl transition cursor-pointer text-center ${
                       font === f.id
                         ? 'bg-indigo-600 text-white border-indigo-600'
                         : dk ? 'border-slate-800 text-slate-400 hover:border-slate-600 hover:text-white bg-slate-900/40'
@@ -917,11 +922,11 @@ export default function OpenSourceLabs({
         <span>{t.privacy}</span>
       </div>
 
-      {/* Invisible font preloader */}
+      {/* Invisible font preloader — forces browser to load all handwriting fonts */}
       <div style={{ position:'absolute', opacity:0, pointerEvents:'none', width:1, height:1, overflow:'hidden' }}>
-        <span style={{ fontFamily:'"Caveat"' }}>ўғқҳ ЎҒҚҲ qolyozma</span>
-        <span style={{ fontFamily:'"Marck Script"' }}>ўғқҳ ЎҒҚҲ qolyozma</span>
-        <span style={{ fontFamily:'"Bad Script"' }}>ўғқҳ ЎҒҚҲ qolyozma</span>
+        {(['Caveat','Kalam','Patrick Hand','Indie Flower','Marck Script','Bad Script','Reenie Beanie','Schoolbell'] as const).map(f => (
+          <span key={f} style={{ fontFamily: `"${f}"` }}>ўғқҳ ЎҒҚҲ qolyozma handwrite salom</span>
+        ))}
       </div>
     </div>
   );

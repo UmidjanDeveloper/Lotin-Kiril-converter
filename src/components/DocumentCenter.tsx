@@ -2323,17 +2323,16 @@ export default function DocumentCenter({ currentLang, theme = 'dark', onSendToHa
                 </div>
               </div>
 
-              {/* Tools Grid Selection */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* iLovePDF-style compact tool grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
                 {TOOLS.filter(tool => {
-                  const queryStr = pdfSearchQuery.toLowerCase();
-                  const matchesSearch = tool.title.toLowerCase().includes(queryStr) || 
-                                        tool.desc.toLowerCase().includes(queryStr) || 
-                                        tool.id.toLowerCase().includes(queryStr);
-                  const matchesCategory = pdfActiveCategory === 'all' || tool.category === pdfActiveCategory;
-                  return matchesSearch && matchesCategory;
+                  const q = pdfSearchQuery.toLowerCase();
+                  const matchSearch = !q || tool.title.toLowerCase().includes(q) || tool.desc.toLowerCase().includes(q);
+                  const matchCat = pdfActiveCategory === 'all' || tool.category === pdfActiveCategory;
+                  return matchSearch && matchCat;
                 }).map((tool) => {
                   const IconComponent = tool.icon;
+                  const isActive = activeTool === tool.id;
                   return (
                     <div
                       key={tool.id}
@@ -2344,32 +2343,27 @@ export default function DocumentCenter({ currentLang, theme = 'dark', onSendToHa
                         setSuccessFilename('');
                         setGlobalError('');
                       }}
-                      className={`rounded-3xl border p-6 flex flex-col justify-between transition-all duration-300 shadow-sm cursor-pointer hover:scale-[1.02] hover:shadow-xl group ${
-                        theme === 'dark' 
-                          ? `bg-slate-950/45 ${tool.borderColor} hover:border-indigo-500/40 hover:bg-slate-950/70` 
-                          : 'bg-white border-slate-200 hover:border-indigo-500 hover:shadow-indigo-500/5'
+                      className={`relative group flex flex-col items-center text-center p-4 rounded-2xl border cursor-pointer transition-all duration-200 ${
+                        isActive
+                          ? theme === 'dark'
+                            ? 'border-indigo-500 bg-indigo-950/40 shadow-lg shadow-indigo-500/10'
+                            : 'border-indigo-500 bg-indigo-50 shadow-md'
+                          : theme === 'dark'
+                            ? `bg-slate-900/40 border-slate-800 hover:border-slate-600 hover:bg-slate-900/70`
+                            : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-sm'
                       }`}
                     >
-                      <div>
-                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center border border-white/5 ${tool.bgColor} ${tool.iconColor} shadow-inner`}>
-                          <IconComponent className="w-5 h-5 group-hover:scale-110 transition duration-300" />
-                        </div>
-                        <h3 className={`text-base font-bold mt-4 font-display group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition duration-200 ${
-                          theme === 'dark' ? 'text-white' : 'text-slate-900'
-                        }`}>
-                          {tool.title}
-                        </h3>
-                        <p className={`text-xs mt-2.5 leading-relaxed ${
-                          theme === 'dark' ? 'text-slate-400' : 'text-slate-600'
-                        }`}>
-                          {tool.desc}
-                        </p>
+                      {isActive && (
+                        <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-indigo-500" />
+                      )}
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 transition-transform group-hover:scale-105 ${tool.bgColor} ${tool.iconColor}`}>
+                        <IconComponent className="w-5 h-5" />
                       </div>
-                      
-                      <div className="mt-5 flex items-center justify-between text-xs font-mono text-indigo-550 font-bold">
-                        <span>Brauzerda (Ishonchli)</span>
-                        <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition duration-200" />
-                      </div>
+                      <h3 className={`text-[11px] font-bold leading-tight ${
+                        theme === 'dark' ? 'text-slate-200' : 'text-slate-800'
+                      }`}>
+                        {tool.title}
+                      </h3>
                     </div>
                   );
                 })}
