@@ -8,6 +8,7 @@ import { UI_TRANSLATIONS, Language } from './utils/translations';
 import LanguageCenter from './components/LanguageCenter';
 import DocumentCenter from './components/DocumentCenter';
 import AiCenter from './components/AiCenter';
+import AdminAIProvider from './components/AdminAIProvider';
 import PricingSection from './components/PricingSection';
 import Logo from './components/Logo';
 import OpenSourceLabs from './components/OpenSourceLabs';
@@ -228,6 +229,10 @@ export default function App() {
                   </button>
                 ))}
               </div>
+              {/* Admin provider override */}
+              <div className="hidden sm:flex items-center ml-2">
+                <AdminAIProvider />
+              </div>
 
               {/* Light/Dark Toggle */}
               <button
@@ -280,6 +285,65 @@ export default function App() {
               }`}>
                 {t.appPositioning}
               </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-5xl mx-auto">
+              <div className={`rounded-3xl p-5 border shadow-sm transition duration-300 ${
+                theme === 'dark'
+                  ? 'bg-slate-950/60 border-slate-800 hover:border-indigo-500/40 hover:bg-slate-900/80'
+                  : 'bg-white border-slate-200 hover:border-indigo-500/30 hover:bg-indigo-50'
+              }`}>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="text-indigo-500 bg-indigo-500/10 rounded-2xl p-3">
+                    <Zap className="w-5 h-5" />
+                  </div>
+                  <span className="text-[10px] uppercase tracking-[0.25em] font-bold text-slate-500">AI + Tezlik</span>
+                </div>
+                <h3 className={`text-lg font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                  Chiroyli va tezkor natijalar
+                </h3>
+                <p className={`mt-3 text-xs leading-relaxed ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
+                  Gemini va mahalliy tahlil yordamida matnlarni yuqori aniqlikda qayta ishlang va rasmiy hujjatlarni bir necha soniyada tayyorlang.
+                </p>
+              </div>
+
+              <div className={`rounded-3xl p-5 border shadow-sm transition duration-300 ${
+                theme === 'dark'
+                  ? 'bg-slate-950/60 border-slate-800 hover:border-emerald-500/40 hover:bg-slate-900/80'
+                  : 'bg-white border-slate-200 hover:border-emerald-500/30 hover:bg-emerald-50'
+              }`}>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="text-emerald-500 bg-emerald-500/10 rounded-2xl p-3">
+                    <Globe2 className="w-5 h-5" />
+                  </div>
+                  <span className="text-[10px] uppercase tracking-[0.25em] font-bold text-slate-500">Maxfiylik</span>
+                </div>
+                <h3 className={`text-lg font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                  100% Brauzer ichida
+                </h3>
+                <p className={`mt-3 text-xs leading-relaxed ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
+                  Hujjatlar va tarjimalar serverga yuborilmaydi. Faqat AI so‘rovlari va shifrlangan kalitlar serverni aniqlash uchun ishlatiladi.
+                </p>
+              </div>
+
+              <div className={`rounded-3xl p-5 border shadow-sm transition duration-300 ${
+                theme === 'dark'
+                  ? 'bg-slate-950/60 border-slate-800 hover:border-purple-500/40 hover:bg-slate-900/80'
+                  : 'bg-white border-slate-200 hover:border-purple-500/30 hover:bg-purple-50'
+              }`}>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="text-purple-500 bg-purple-500/10 rounded-2xl p-3">
+                    <Sparkles className="w-5 h-5" />
+                  </div>
+                  <span className="text-[10px] uppercase tracking-[0.25em] font-bold text-slate-500">UX</span>
+                </div>
+                <h3 className={`text-lg font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                  Zamonaviy va chiroyli UI
+                </h3>
+                <p className={`mt-3 text-xs leading-relaxed ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
+                  Toza, premium ko‘rinish va intuitiv boshqaruv bilan barcha xizmatlar bir joyda - matn, tarjima, AI va hujjatlar.
+                </p>
+              </div>
             </div>
 
             {/* Main 4 Centers Navigation tiles - EXTREMELY BEAUTIFUL iLovePDF STYLE BENTO GRID */}
@@ -458,13 +522,13 @@ export default function App() {
                     }`}>
                       {currentLang === 'uz' ? "Qo'lyozma Studiyasi" : currentLang === 'ru' ? "Студия Почерка" : "Handwriting Studio"}
                     </h3>
-                    <p className={`text-[11px] font-mono mt-0.5 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-555 font-semibold'}`}>
+                    <p className={`text-[11px] font-mono mt-0.5 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500 font-semibold'}`}>
                       {currentLang === 'uz' ? "Matnlarni qo'lyozmaga o'tkazish" : currentLang === 'ru' ? "Перевод текста в реалистичный почерк" : "Transform text into beautiful handwriting"}
                     </p>
                   </div>
                   
                   <p className={`text-xs mt-4 leading-relaxed ${
-                    theme === 'dark' ? 'text-slate-400' : 'text-slate-650 font-medium'
+                    theme === 'dark' ? 'text-slate-400' : 'text-slate-600 font-medium'
                   }`}>
                     {currentLang === 'uz' 
                       ? "Kiritilgan matnlarni yoki Word (.docx), PDF, .txt hujjatlarini chiroyli maktab daftari chiziqlarida, katakli varaqda yoki sariq bloknotda sozlangan qo'lyozmaga aylantiring (PDF/PNG formatda yuklab olish bilan)."

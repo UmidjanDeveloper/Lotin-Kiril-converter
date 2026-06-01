@@ -129,9 +129,13 @@ export default function LanguageCenter({ currentLang, onFileProcessed, theme = '
         return;
       }
       
-      const res = await fetch('/api/gemini/translate', {
+      const headers: any = { 'Content-Type': 'application/json' };
+      const providerOverride = localStorage.getItem('ai_provider_override');
+      if (providerOverride) headers['X-AI-Provider'] = providerOverride;
+
+      const res = await fetch('/api/ai/translate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           text: transInput.trim(),
           sourceLang: currentLang,
@@ -160,9 +164,13 @@ export default function LanguageCenter({ currentLang, onFileProcessed, theme = '
     setPolishOutput('');
 
     try {
-      const res = await fetch('/api/gemini/polish', {
+      const headers: any = { 'Content-Type': 'application/json' };
+      const providerOverride = localStorage.getItem('ai_provider_override');
+      if (providerOverride) headers['X-AI-Provider'] = providerOverride;
+
+      const res = await fetch('/api/ai/polish', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           text: polishInput.trim(),
           style: polishStyle

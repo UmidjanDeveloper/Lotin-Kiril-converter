@@ -252,9 +252,13 @@ export default function DocumentCenter({ currentLang, theme = 'dark', onSendToHa
     const apiFrom = docFrom.trim() || defaults.from;
     const apiDetail = docDetail.trim() || defaults.detail;
     try {
-      const res = await fetch('/api/gemini/document', {
+      const headers: any = { 'Content-Type': 'application/json' };
+      const providerOverride = localStorage.getItem('ai_provider_override');
+      if (providerOverride) headers['X-AI-Provider'] = providerOverride;
+
+      const res = await fetch('/api/ai/document', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           templateType: selectedTemplate,
           to: apiTo,

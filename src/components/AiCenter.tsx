@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { UI_TRANSLATIONS, Language } from '../utils/translations';
 import { Bot, Send, RefreshCw, AlertCircle, X, FileText, FileUp, Sparkles } from 'lucide-react';
 
@@ -24,10 +24,11 @@ export default function AiCenter({ currentLang, theme = 'dark', onSendToHandwrit
 
   // Chat state
   const [messages, setMessages] = useState<{ sender: 'user' | 'bot'; text: string }[]>([
-    { sender: 'bot', text: '' } // Localized dynamically at render-time using t.chatBotWelcome
+    { sender: 'bot', text: t.chatBotWelcome || "Assalomu alaykum! Menga hisobot, shartnoma yoki darslik yuklang va xohlagan savolingizni so'rang." }
   ]);
   const [chatInput, setChatInput] = useState('');
   const [isAgentReplying, setIsAgentReplying] = useState(false);
+  const [apiError, setApiError] = useState<string>('');
 
   // Ingested context for AI Chat Bot document-understanding
   const [ingestedText, setIngestedText] = useState<string>('');
@@ -57,15 +58,25 @@ export default function AiCenter({ currentLang, theme = 'dark', onSendToHandwrit
     }
   };
 
+  useEffect(() => {
+    if (messages.length === 1 && messages[0].sender === 'bot') {
+      setMessages([{ sender: 'bot', text: t.chatBotWelcome || "Assalomu alaykum! Menga hisobot, shartnoma yoki darslik yuklang va xohlagan savolingizni so'rang." }]);
+    }
+  }, [currentLang, t.chatBotWelcome, messages]);
+
   const handleSummarize = async () => {
     if (!sumText.trim()) return;
     setIsSummarizing(true);
     setSumOutput('');
     try {
-      const res = await fetch('/api/gemini/summarize', {
+      const headers: any = { 'Content-Type': 'application/json' };
+      const providerOverride = localStorage.getItem('ai_provider_override');
+      if (providerOverride) headers['X-AI-Provider'] = providerOverride;
+
+      const res = await fetch('/api/ai/summarize', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: sumText, lang: currentLang === 'uz' ? 'uz' : 'ru' }),
+        headers,
+        body: JSON.stringify({ text: sumText, lang: currentLang }),
       });
       let rawText = "";
       try {
@@ -102,27 +113,31 @@ export default function AiCenter({ currentLang, theme = 'dark', onSendToHandwrit
 
   const handleSendMessage = async () => {
     if (!chatInput.trim()) return;
-    const userQuery = chatInput;
-    
-    // UI update
-    setMessages(prev => [...prev, { sender: 'user', text: userQuery }]);
+    const userQuery = chatInput.trim();
+
+    const updatedMessages = [...messages, { sender: 'user', text: userQuery }];
+    setMessages(updatedMessages);
     setChatInput('');
+    setApiError('');
     setIsAgentReplying(true);
 
-    // If a document context has been uploaded, build a rich query
     let compoundQuery = userQuery;
     if (ingestedText.trim()) {
       compoundQuery = `[FOYDALANUVCHIDAN HUJJAT ILOVASI: ${ingestedFileName}]\nUshbu hujjat matni quyidagicha:\n"""\n${ingestedText}\n"""\n\nSavol / Topshiriq: ${userQuery}`;
     }
 
     try {
-      const res = await fetch('/api/gemini/chat', {
+      const headers: any = { 'Content-Type': 'application/json' };
+      const providerOverride = localStorage.getItem('ai_provider_override');
+      if (providerOverride) headers['X-AI-Provider'] = providerOverride;
+
+      const res = await fetch('/api/ai/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
-          messages: messages.slice(-8), // Keep a lean local history
+          messages: updatedMessages.slice(-12),
           query: compoundQuery,
-          lang: currentLang === 'uz' ? 'uz' : 'ru'
+          lang: currentLang === 'uz' ? 'uz' : currentLang === 'ru' ? 'ru' : 'en'
         }),
       });
       let rawText = "";
@@ -149,10 +164,11 @@ export default function AiCenter({ currentLang, theme = 'dark', onSendToHandwrit
       } catch {
         throw new Error("Serverdan noto'g'ri ko'rinishdagi ma'lumot qaytdi.");
       }
-      setMessages(prev => [...prev, { sender: 'bot', text: data.text || "Uzr, savolingizga javob olishda xatolik yuz berdi." }]);
+      setMessages(prev => [...prev, { sender: 'bot', text: data.text || t.localFallbackError }]);
     } catch (err: any) {
       console.error("Gemini chat failed:", err);
-      setMessages(prev => [...prev, { sender: 'bot', text: err.message || "Yordamchi vaqtincha offline rejimda. Iltimos, ulanish tarmoqlari va API kalit sozlamalarini tekshiring hamda birozdan keyin qayta yozib ko'ring." }]);
+      setApiError(err.message || "Yordamchi vaqtincha offline rejimda. Iltimos, ulanish tarmoqlari va API kalit sozlamalarini tekshiring hamda birozdan keyin qayta yozib ko'ring.");
+      setMessages(prev => [...prev, { sender: 'bot', text: t.localFallbackError || "Uzr, savolingizga javob olishda xatolik yuz berdi." }]);
     } finally {
       setIsAgentReplying(false);
     }
@@ -167,10 +183,20 @@ export default function AiCenter({ currentLang, theme = 'dark', onSendToHandwrit
         }`}>
           {t.aiCenterTitle}
         </h2>
-        <p className={`text-xs sm:text-sm mt-1 ${theme === 'dark' ? 'text-slate-400 font-medium' : 'text-slate-550'}`}>
+        <p className={`text-xs sm:text-sm mt-1 ${theme === 'dark' ? 'text-slate-400 font-medium' : 'text-slate-500'}`}>
           AI tahlili, hujjatlar bo'yicha tezkor savol-javob va aqlli til tahririyoti.
         </p>
       </div>
+
+      {apiError && (
+        <div className={`flex items-start gap-3 rounded-3xl p-4 border ${theme === 'dark' ? 'bg-rose-500/10 border-rose-500/20 text-rose-200' : 'bg-rose-50 border-rose-200 text-rose-700'}`}>
+          <AlertCircle className="w-5 h-5" />
+          <div className="text-xs leading-relaxed">
+            <strong className="block font-semibold">AI bog‘lanish xatosi</strong>
+            <span>{apiError}</span>
+          </div>
+        </div>
+      )}
 
       {/* AI Sub-navigation tabs: Chatbot is first, Summarizer second */}
       <div className={`flex p-1 rounded-2xl border shadow-lg shrink-0 w-full md:w-auto self-start max-w-sm transition duration-200 ${
@@ -219,7 +245,7 @@ export default function AiCenter({ currentLang, theme = 'dark', onSendToHandwrit
                   </h3>
                 </div>
                 
-                <p className={`text-xs mb-4 leading-relaxed ${theme === 'dark' ? 'text-slate-450' : 'text-slate-550'}`}>
+<p className={`text-xs mb-4 leading-relaxed ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
                   Xohlagan matnli faylni (.txt, .md, .csv) yuklang yoki matn nusxasini joylashtiring. AI bot ushbu fayl mazmunini to'liq tushunib, savollaringizga aniq javob beradi.
                 </p>
 
@@ -229,7 +255,7 @@ export default function AiCenter({ currentLang, theme = 'dark', onSendToHandwrit
                     theme === 'dark' ? 'border-slate-800 bg-slate-900/20 hover:bg-slate-900/40' : 'border-slate-300 bg-slate-50 hover:bg-slate-100'
                   }`}>
                     <FileText className="w-6 h-6 text-slate-400 mb-1.5" />
-                    <span className="text-[11px] font-bold text-slate-450 text-center">Savol-javob uchun fayl tanlash</span>
+                    <span className="text-[11px] font-bold text-slate-400 text-center">Savol-javob uchun fayl tanlash</span>
                     <input
                       type="file"
                       ref={fileInputRef}
@@ -258,7 +284,7 @@ export default function AiCenter({ currentLang, theme = 'dark', onSendToHandwrit
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      <label className="text-[11px] font-bold block text-slate-450">Yokida matn nusxasini to'g'ridan-to'g'ri joylang:</label>
+                      <label className="text-[11px] font-bold block text-slate-400">Yokida matn nusxasini to'g'ridan-to'g'ri joylang:</label>
                       <textarea
                         value={ingestedText}
                         onChange={(e) => {
@@ -272,7 +298,7 @@ export default function AiCenter({ currentLang, theme = 'dark', onSendToHandwrit
                         rows={4}
                         placeholder="Ushbu maydonga istalgan shartnoma, maqola yoki hujjat matnidan namuna ko'chirib joylashtiring..."
                         className={`w-full text-xs p-3 border rounded-xl outline-none resize-none focus:border-indigo-550 transition ${
-                          theme === 'dark' ? 'bg-slate-909 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                          theme === 'dark' ? 'bg-slate-900 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
                         }`}
                       />
                     </div>
@@ -296,13 +322,13 @@ export default function AiCenter({ currentLang, theme = 'dark', onSendToHandwrit
                       <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                     </span>
                     <span className={`text-[11px] font-bold font-mono ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
-                      Muloqot tili: {currentLang === 'uz' ? "O'zbekcha" : "Russian"}
+                      Muloqot tili: {currentLang === 'uz' ? "O'zbekcha" : currentLang === 'ru' ? 'Ruscha' : 'English'}
                     </span>
                   </div>
                   
                   {ingestedFileName && (
                     <span className="text-[10px] font-bold px-2.5 py-1 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-full flex items-center gap-1">
-                      <Sparkles className="w-3 h-3 text-indigo-455 animate-pulse" />
+                      <Sparkles className="w-3 h-3 text-indigo-400 animate-pulse" />
                       {ingestedFileName.slice(0, 18)}... hujjat bo'yicha tahlil faol
                     </span>
                   )}
@@ -317,7 +343,7 @@ export default function AiCenter({ currentLang, theme = 'dark', onSendToHandwrit
                           ? 'bg-indigo-600 text-white rounded-br-none shadow-sm'
                           : theme === 'dark'
                             ? 'bg-slate-900/80 border border-slate-800 text-slate-200 rounded-bl-none'
-                            : 'bg-slate-50 border border-slate-200 text-slate-850 rounded-bl-none font-medium'
+                            : 'bg-slate-50 border border-slate-200 text-slate-900 rounded-bl-none font-medium'
                       }`}>
                         <span className={`font-bold block text-[10px] mb-1 ${m.sender === 'user' ? 'text-indigo-200' : 'text-indigo-500'}`}>
                           {m.sender === 'user' ? t.chatYou : t.chatBot}
@@ -342,7 +368,7 @@ export default function AiCenter({ currentLang, theme = 'dark', onSendToHandwrit
 
                 {/* Input Form area */}
                 <div className={`flex gap-2.5 pt-3 border-t ${
-                  theme === 'dark' ? 'border-slate-800' : 'border-slate-150'
+                  theme === 'dark' ? 'border-slate-800' : 'border-slate-200'
                 }`}>
                   <input
                     type="text"
@@ -383,7 +409,7 @@ export default function AiCenter({ currentLang, theme = 'dark', onSendToHandwrit
                   <h3 className={`text-xs font-bold font-mono tracking-wider uppercase block ${
                     theme === 'dark' ? 'text-white' : 'text-slate-900'
                   }`}>{t.sumSourceTitle}</h3>
-                  <p className="text-[11px] text-slate-450">Tuzatmoqchi, sayqallamoqchi yoki konspektlashtirmoqchi bo'lgan matningizni kiriting:</p>
+                  <p className="text-[11px] text-slate-400">Tuzatmoqchi, sayqallamoqchi yoki konspektlashtirmoqchi bo'lgan matningizni kiriting:</p>
                 </main>
                 <textarea
                   value={sumText}
@@ -410,7 +436,7 @@ export default function AiCenter({ currentLang, theme = 'dark', onSendToHandwrit
                   <div className={`p-4 rounded-2xl border text-xs sm:text-sm leading-relaxed whitespace-pre-wrap min-h-[200px] ${
                     sumOutput 
                       ? theme === 'dark' ? 'text-slate-200 border-purple-500/15 bg-slate-950/20' : 'text-slate-900 font-medium border-purple-200 bg-purple-50/10'
-                      : 'text-slate-500 italic border-slate-200'
+                      : 'text-slate-500 italic border-slate-200 bg-slate-50'
                   }`}>
                     {sumOutput || t.sumResultPlaceholder}
                   </div>
