@@ -123,6 +123,7 @@ export default function OpenSourceLabs({
   const [fsize, setFsize]     = useState(22);
   const [lh,    setLh]        = useState(38);
   const [zoom,  setZoom]      = useState(0.85);
+  const [jitter, setJitter]   = useState(3);
 
   // Toolbar state (per-block or global for textarea mode)
   const [bold,    setBold]    = useState(false);
@@ -241,7 +242,7 @@ export default function OpenSourceLabs({
       for (let y = 0; y < canvas.height; y += gs) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
     }
 
-    // Text rendering helper
+    // Text rendering helper with optional per-character jitter
     const drawText = (t: string, startX: number, startY: number, maxW: number, opts: { font: HWFont; size: number; color: string; bold: boolean; italic: boolean; underline: boolean }) => {
       const fs = `${opts.italic ? 'italic ' : ''}${opts.bold ? 'bold ' : ''}${opts.size * S}px "${opts.font}", cursive`;
       ctx.font = fs;
@@ -262,7 +263,27 @@ export default function OpenSourceLabs({
         if (cur) wrapped.push(cur);
         for (const wl of wrapped) {
           if (cy > canvas.height - 20) break;
-          ctx.fillText(wl, startX, cy, maxW);
+          if (jitter > 0) {
+            let cx = startX;
+            for (const char of wl) {
+              const charW = ctx.measureText(char).width;
+              const jx = (Math.random() - 0.5) * jitter * S * 0.9;
+              const jy = (Math.random() - 0.5) * jitter * S * 0.65;
+              const angle = (Math.random() - 0.5) * jitter * 0.007;
+              const sizeVar = 1 + (Math.random() - 0.5) * jitter * 0.018;
+              ctx.save();
+              ctx.translate(cx + jx, cy + jy);
+              ctx.rotate(angle);
+              ctx.font = `${opts.italic ? 'italic ' : ''}${opts.bold ? 'bold ' : ''}${opts.size * S * sizeVar}px "${opts.font}", cursive`;
+              ctx.fillStyle = opts.color;
+              ctx.fillText(char, 0, 0);
+              ctx.restore();
+              ctx.font = fs;
+              cx += charW + (Math.random() - 0.5) * jitter * S * 0.18;
+            }
+          } else {
+            ctx.fillText(wl, startX, cy, maxW);
+          }
           if (opts.underline) {
             ctx.strokeStyle = opts.color; ctx.lineWidth = 1;
             ctx.beginPath(); ctx.moveTo(startX, cy + 2); ctx.lineTo(startX + ctx.measureText(wl).width, cy + 2); ctx.stroke();
@@ -301,6 +322,10 @@ export default function OpenSourceLabs({
     const marginLine = (paper === 'ruled' || paper === 'yellow')
       ? `<div style="position:absolute;top:0;bottom:0;left:${ML}px;width:2px;background:#fca5a5;pointer-events:none"></div>` : '';
 
+    const jitterCss = jitter > 0
+      ? `filter:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='j'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='${(0.012 + jitter * 0.004).toFixed(3)}' numOctaves='3' seed='42'/%3E%3CfeDisplacementMap in='SourceGraphic' scale='${jitter * 1.5}'/%3E%3C/filter%3E%3C/svg%3E#j")`
+      : '';
+
     const content = mode === 'simple'
       ? `<pre style="
           font-family:'${font}',cursive;
@@ -312,6 +337,7 @@ export default function OpenSourceLabs({
           line-height:${lh}px;
           padding:${MT}px 40px 40px ${ML+8}px;
           margin:0;white-space:pre-wrap;word-break:break-word;
+          ${jitterCss}
         ">${text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre>`
       : blocks.sort((a,b)=>a.y-b.y).map(b => `
           <div style="
@@ -555,12 +581,30 @@ export default function OpenSourceLabs({
             {/* Font size */}
             <div>
               <label className={`${lbl} flex justify-between`}>
-                <span>{currentLang==='uz'?"Shrift o'lchami":currentLang==='ru'?'Размер шрифта':'Font size'}</span>
+                <span>{currentLang==='uz'?"Yozuv o'lchami":currentLang==='ru'?'Размер шрифта':'Font size'}</span>
                 <span className="text-indigo-400 font-black">{fsize}px</span>
               </label>
               <input type="range" min={12} max={36} value={fsize}
                 onChange={e => { const v = +e.target.value; setFsize(v); applyToActive({ fontSize: v }); }}
                 className="w-full accent-indigo-500 cursor-col-resize" />
+            </div>
+
+            {/* Jitter / Insoniy Tebranish */}
+            <div>
+              <label className={`${lbl} flex justify-between`}>
+                <span>{currentLang==='uz'?"Insoniy Tebranish (Jitter)":currentLang==='ru'?'Дрожание (Jitter)':'Human Jitter'}</span>
+                <span className={`font-black ${jitter === 0 ? 'text-slate-500' : 'text-amber-400'}`}>{jitter}</span>
+              </label>
+              <input type="range" min={0} max={10} step={1} value={jitter}
+                onChange={e => setJitter(+e.target.value)}
+                className="w-full accent-amber-500 cursor-col-resize" />
+              <p className={`text-[9px] mt-1 ${dk ? 'text-slate-600' : 'text-slate-400'}`}>
+                {currentLang==='uz'
+                  ? '0 = tekis kompyuter, 10 = haqiqiy qo\'l yozuvi'
+                  : currentLang==='ru'
+                  ? '0 = ровный, 10 = живой почерк'
+                  : '0 = clean, 10 = natural handwriting'}
+              </p>
             </div>
 
             {/* Line spacing */}
@@ -653,6 +697,7 @@ export default function OpenSourceLabs({
                         paddingBottom: 40,
                         caretColor: color,
                         minHeight: PH,
+                        filter: jitter > 0 ? `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='j'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='${(0.012 + jitter * 0.004).toFixed(3)}' numOctaves='3' seed='42'/%3E%3CfeDisplacementMap in='SourceGraphic' scale='${jitter * 1.5}'/%3E%3C/filter%3E%3C/svg%3E#j")` : 'none',
                       }}
                     />
                     {/* Character count */}
