@@ -33,7 +33,7 @@ interface PdfTool {
 
 export default function DocumentCenter({ currentLang, theme = 'dark', onSendToHandwriting }: DocumentCenterProps) {
   const t = UI_TRANSLATIONS[currentLang];
-  const [subTab, setSubTab] = useState<'templates' | 'pdf'>('templates');
+  const [subTab, setSubTab] = useState<'templates' | 'pdf'>('pdf');
   const [activeTool, setActiveTool] = useState<string | null>(null);
 
   // Document templates state
@@ -45,6 +45,7 @@ export default function DocumentCenter({ currentLang, theme = 'dark', onSendToHa
   const [docDetail, setDocDetail] = useState('');
   const [docPreviewMode, setDocPreviewMode] = useState<'computer' | 'handwriting'>('computer');
   const [handwritingStyle, setHandwritingStyle] = useState<'blue' | 'black'>('blue');
+  const [hwFont, setHwFont] = useState<string>('Caveat');
   const [generatedDocText, setGeneratedDocText] = useState<string>('');
   const [isGeneratingDocText, setIsGeneratingDocText] = useState(false);
   const [isAiGenerated, setIsAiGenerated] = useState(false);
@@ -327,6 +328,66 @@ export default function DocumentCenter({ currentLang, theme = 'dark', onSendToHa
   };
 
   const createA4PdfBlob = async (text: string) => {
+    if (docPreviewMode === 'handwriting') {
+      await document.fonts.ready;
+      const SCALE = 2;
+      const PW = 794;
+      const PH = 1123;
+      const canvas = document.createElement('canvas');
+      canvas.width = PW * SCALE;
+      canvas.height = PH * SCALE;
+      const ctx = canvas.getContext('2d')!;
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const lineSpacing = 34;
+      const marginTopPx = pageMargins.top * (PH / 297) * SCALE;
+      ctx.strokeStyle = '#bfdbfe';
+      ctx.lineWidth = 0.5 * SCALE;
+      for (let y = marginTopPx + lineSpacing * SCALE; y < canvas.height - 20 * SCALE; y += lineSpacing * SCALE) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+      }
+      const leftPx = pageMargins.left * (PW / 210) * SCALE;
+      ctx.strokeStyle = '#fca5a5';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(leftPx, 0); ctx.lineTo(leftPx, canvas.height); ctx.stroke();
+
+      const penColor = handwritingStyle === 'blue' ? '#1d4ed8' : '#1e293b';
+      const fontSize = 24;
+      ctx.font = `${fontSize * SCALE}px "${hwFont}", cursive`;
+      ctx.fillStyle = penColor;
+
+      const textX = leftPx + 10 * SCALE;
+      const rightPx = pageMargins.right * (PW / 210) * SCALE;
+      const maxW = canvas.width - textX - rightPx;
+      let cy = marginTopPx + lineSpacing * SCALE + fontSize * SCALE * 0.4;
+
+      const rawLines = text.replace(/\r\n/g, '\n').split('\n');
+      for (const rawLine of rawLines) {
+        if (cy > canvas.height - 30 * SCALE) break;
+        if (!rawLine.trim()) { cy += lineSpacing * SCALE; continue; }
+        const words = rawLine.split(' ');
+        let cur = '';
+        for (const w of words) {
+          const test = cur + (cur ? ' ' : '') + w;
+          if (ctx.measureText(test).width > maxW && cur) {
+            ctx.fillText(cur.trim(), textX, cy);
+            cur = w;
+            cy += lineSpacing * SCALE;
+            if (cy > canvas.height - 30 * SCALE) break;
+          } else { cur = test; }
+        }
+        if (cur && cy <= canvas.height - 30 * SCALE) ctx.fillText(cur.trim(), textX, cy);
+        cy += lineSpacing * SCALE;
+      }
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.93);
+      const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+      pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297);
+      return pdf.output('blob');
+    }
+
     const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
     const marginLeft = pageMargins.left;
     const marginRight = pageMargins.right;
@@ -335,15 +396,12 @@ export default function DocumentCenter({ currentLang, theme = 'dark', onSendToHa
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     const contentWidth = pageWidth - marginLeft - marginRight;
-    const fontSize = docPreviewMode === 'handwriting' ? 18 : 12;
+    const fontSize = 12;
     const lineHeight = fontSize * 0.7;
 
     doc.setFont('Times', 'Normal');
     doc.setFontSize(fontSize);
-    doc.setTextColor(docPreviewMode === 'handwriting'
-      ? (handwritingStyle === 'blue' ? '#1d4ed8' : '#1e293b')
-      : '#000000'
-    );
+    doc.setTextColor('#000000');
 
     const rawLines = text.replace(/\r\n/g, '\n').split('\n');
     let cursorY = marginTop;
@@ -501,7 +559,7 @@ export default function DocumentCenter({ currentLang, theme = 'dark', onSendToHa
           <title>A4 Chop Etish - Hujjat.uz</title>
           <link rel="preconnect" href="https://fonts.googleapis.com">
           <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-          <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=Marck+Script&display=swap" rel="stylesheet">
+          <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=Kalam:wght@400;700&family=Patrick+Hand&family=Indie+Flower&family=Marck+Script&family=Bad+Script&family=Reenie+Beanie&family=Schoolbell&display=swap" rel="stylesheet">
           <style>
             @media print {
               @page {
@@ -550,12 +608,11 @@ export default function DocumentCenter({ currentLang, theme = 'dark', onSendToHa
               color: #000;
             }
             .handwriting {
-              font-family: 'Caveat', cursive;
+              font-family: '${hwFont}', cursive;
               font-size: 20pt;
               line-height: 1.5;
               color: ${penColor};
-              transform: rotate(-0.5deg);
-              letter-spacing: 0.5px;
+              letter-spacing: 0.3px;
             }
             .lines-background {
               position: absolute;
@@ -571,9 +628,9 @@ export default function DocumentCenter({ currentLang, theme = 'dark', onSendToHa
           </style>
         </head>
         <body>
-          <div class="a4-container \${isHandwriting ? 'handwriting' : 'computer'}">
-            \${isHandwriting ? '<div class="lines-background"></div>' : ''}
-            <div>\${generatedDocText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\\n/g, '<br/>')}</div>
+          <div class="a4-container ${isHandwriting ? 'handwriting' : 'computer'}">
+            ${isHandwriting ? '<div class="lines-background"></div>' : ''}
+            <div>${generatedDocText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br/>')}</div>
           </div>
           <script>
             window.onload = function() {
@@ -2166,22 +2223,43 @@ export default function DocumentCenter({ currentLang, theme = 'dark', onSendToHa
               </div>
 
               {docPreviewMode === 'handwriting' && (
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-bold text-slate-400 font-mono">Rasm:</span>
-                  <button
-                    onClick={() => setHandwritingStyle('blue')}
-                    className={`w-5 h-5 rounded-full bg-blue-700 transition duration-150 border-2 ${
-                      handwritingStyle === 'blue' ? 'border-white scale-110 shadow' : 'border-transparent'
-                    }`}
-                    title="Ko'k ruchka"
-                  />
-                  <button
-                    onClick={() => setHandwritingStyle('black')}
-                    className={`w-5 h-5 rounded-full bg-slate-900 transition duration-150 border-2 ${
-                      handwritingStyle === 'black' ? 'border-white scale-110 shadow' : 'border-transparent'
-                    }`}
-                    title="Miya ruchka"
-                  />
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-bold text-slate-400 font-mono">Ruchka:</span>
+                    <button
+                      onClick={() => setHandwritingStyle('blue')}
+                      className={`w-5 h-5 rounded-full bg-blue-700 transition duration-150 border-2 ${
+                        handwritingStyle === 'blue' ? 'border-white scale-110 shadow' : 'border-transparent'
+                      }`}
+                      title="Ko'k ruchka"
+                    />
+                    <button
+                      onClick={() => setHandwritingStyle('black')}
+                      className={`w-5 h-5 rounded-full bg-slate-900 transition duration-150 border-2 ${
+                        handwritingStyle === 'black' ? 'border-white scale-110 shadow' : 'border-transparent'
+                      }`}
+                      title="Qora ruchka"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[11px] font-bold text-slate-400 font-mono">Shrift:</span>
+                    {['Caveat', 'Kalam', 'Patrick Hand', 'Indie Flower', 'Bad Script', 'Reenie Beanie'].map(f => (
+                      <button
+                        key={f}
+                        onClick={() => setHwFont(f)}
+                        style={{ fontFamily: `"${f}", cursive` }}
+                        className={`px-2 py-0.5 text-xs rounded-lg border transition cursor-pointer ${
+                          hwFont === f
+                            ? 'bg-indigo-600 text-white border-indigo-600'
+                            : theme === 'dark'
+                              ? 'border-slate-700 text-slate-300 hover:border-slate-500'
+                              : 'border-slate-200 text-slate-700 hover:border-slate-400'
+                        }`}
+                      >
+                        {f.split(' ')[0]}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -2244,7 +2322,7 @@ export default function DocumentCenter({ currentLang, theme = 'dark', onSendToHa
                 className={`w-[210mm] min-h-[297mm] bg-white text-black shadow-inner relative text-left leading-relaxed break-words whitespace-pre-wrap rounded-xl outline-none ${previewEditing ? 'ring-2 ring-indigo-500' : ''}`}
                 style={{
                   padding: `${pageMargins.top}mm ${pageMargins.right}mm ${pageMargins.bottom}mm ${pageMargins.left}mm`,
-                  fontFamily: docPreviewMode === 'handwriting' ? "'Caveat', cursive" : "'Times New Roman', Times, serif",
+                  fontFamily: docPreviewMode === 'handwriting' ? `"${hwFont}", cursive` : "'Times New Roman', Times, serif",
                   fontSize: docPreviewMode === 'handwriting' ? "18pt" : "12pt",
                   color: docPreviewMode === 'handwriting' ? (handwritingStyle === 'blue' ? '#1d4ed8' : '#1e293b') : '#000000',
                   lineHeight: docPreviewMode === 'handwriting' ? '1.5' : '1.7',
