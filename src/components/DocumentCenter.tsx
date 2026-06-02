@@ -780,7 +780,7 @@ export default function DocumentCenter({ currentLang, theme = 'dark', onSendToHa
       }
     } catch (err: any) {
       console.error(err);
-      setErrorMessage(err.message || "Gemini AI bilan ulanib bo'lmadi. Offline shablon shakllantirildi.");
+      setErrorMessage(err.message || "AI xizmat bilan ulanib bo'lmadi. Offline shablon shakllantirildi.");
       setGeneratedDocText(getLocalDraftText(selectedTemplate, docTo, docFrom, docDetail));
     } finally {
       setIsGeneratingDocText(false);

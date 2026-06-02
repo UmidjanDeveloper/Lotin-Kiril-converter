@@ -526,7 +526,7 @@ export default function App() {
                   style={{ background:'var(--grad-coral)', cursor:'pointer', position:'relative', overflow:'hidden' }}>
                   <span className="step-badge" style={{ position:'absolute', top:20, right:20 }}>3</span>
                   <div style={{ width:48, height:48, marginBottom:20 }}><AiIllus /></div>
-                  <p className="label" style={{ color:'rgba(29,28,28,.55)', marginBottom:8 }}>Gemini AI</p>
+                  <p className="label" style={{ color:'rgba(29,28,28,.55)', marginBottom:8 }}>AI · Chat · OCR</p>
                   <h3 className="h3" style={{ color:'var(--ink)', marginBottom:12 }}>{t.aiCenter}</h3>
                   <p className="body" style={{ color:'rgba(29,28,28,.65)', marginBottom:24 }}>
                     {currentLang==='uz'?'Hujjatlarni konspektlash, AI chat va rasmiy shablonlarni to\'ldirish.':currentLang==='ru'?'Конспектирование, ИИ-чат и автозаполнение официальных шаблонов.':'Summarize docs, AI chat and auto-fill official templates.'}
@@ -571,45 +571,92 @@ export default function App() {
             ═══════════════════════════════════════════════════════════════ */}
             <section className="container section-gap">
               <h2 className="h2 reveal" style={{ marginBottom:'clamp(2rem,5vw,4rem)', color: dk?'#F2EFF8':undefined }}>
-                {currentLang==='uz'?<>Nima uchun <span className="text-grad-hot">Hujjat.uz</span>?</>
-                  :currentLang==='ru'?<>Почему <span className="text-grad-hot">Hujjat.uz</span>?</>
-                  :<>Why <span className="text-grad-hot">Hujjat.uz</span>?</>}
+                {currentLang==='uz'?<>Platformaning<br/><span className="text-grad-coral">3 ta ustunligi</span></>
+                  :currentLang==='ru'?<>3 главных<br/><span className="text-grad-coral">преимущества</span></>
+                  :<>3 core<br/><span className="text-grad-coral">advantages</span></>}
               </h2>
-              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))', gap:16 }}>
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))', gap:16 }}>
                 {[
                   {
-                    n:'01', emoji:'⚡',
-                    grad: 'linear-gradient(135deg,rgba(255,248,141,.5) 0%,rgba(255,248,141,.1) 100%)',
-                    title: currentLang==='uz'?'Tez va aniq':currentLang==='ru'?'Быстро и точно':'Fast & Accurate',
-                    desc: currentLang==='uz'?'Gemini AI va mahalliy algoritmlar. Bir necha soniyada natija.':currentLang==='ru'?'Gemini AI и локальные алгоритмы. Результат за секунды.':'Gemini AI and local algorithms. Results in seconds.',
+                    n:'01',
+                    // Colourful icon block instead of plain emoji
+                    icon: (
+                      <div style={{ width:52, height:52, borderRadius:16, background:'var(--grad-cool)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="2" y="3" width="20" height="14" rx="3"/><path d="M8 21h8M12 17v4"/>
+                        </svg>
+                      </div>
+                    ),
+                    grad: 'linear-gradient(135deg,rgba(122,247,247,.28) 0%,rgba(131,245,130,.12) 100%)',
+                    title: currentLang==='uz'?'Har qurilmada — bir xil':currentLang==='ru'?'На любом устройстве':'Works on Any Device',
+                    desc: currentLang==='uz'
+                      ?'Telefon, planshet yoki kompyuter — fark qilmaydi. Ilovani yuklab olish ham mumkin (PWA). Internet bo\'lmasa ham asosiy funksiyalar ishlaydi.'
+                      :currentLang==='ru'
+                      ?'Телефон, планшет или компьютер — без разницы. Доступна установка как приложение (PWA). Основные функции работают и без интернета.'
+                      :'Phone, tablet or PC — no difference. Install as an app (PWA). Core features work even offline.',
                   },
                   {
-                    n:'02', emoji:'🔒',
-                    grad: 'linear-gradient(135deg,rgba(122,247,247,.3) 0%,rgba(122,247,247,.06) 100%)',
-                    title: currentLang==='uz'?'Maxfiylik kafolati':currentLang==='ru'?'Конфиденциальность':'Privacy First',
-                    desc: currentLang==='uz'?'Fayllaringiz serverga yuklanmaydi. Hamma narsa brauzerda.':currentLang==='ru'?'Файлы не покидают браузер. Никакой загрузки.':'Files never leave your browser.',
+                    n:'02',
+                    icon: (
+                      <div style={{ width:52, height:52, borderRadius:16, background:'var(--grad-hot)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                        </svg>
+                      </div>
+                    ),
+                    grad: 'linear-gradient(135deg,rgba(255,21,138,.14) 0%,rgba(255,248,141,.18) 100%)',
+                    title: currentLang==='uz'?"Ma'lumotlaringiz faqat sizniki":currentLang==='ru'?'Ваши данные — только ваши':'Your Data Stays Yours',
+                    desc: currentLang==='uz'
+                      ?'Hech qanday fayl serverga yuklanmaydi. Hujjatlar, tarjimalar va PDF — barchasi brauzeringizning o\'zida. Hech kim ko\'rmaydi.'
+                      :currentLang==='ru'
+                      ?'Никакие файлы не загружаются на сервер. Документы, переводы и PDF обрабатываются прямо в вашем браузере. Никто не видит.'
+                      :'No file is ever uploaded to a server. Documents, translations and PDFs are processed inside your browser only.',
                   },
                   {
-                    n:'03', emoji:'🎁',
-                    grad: 'linear-gradient(135deg,rgba(253,151,253,.25) 0%,rgba(253,151,253,.05) 100%)',
-                    title: currentLang==='uz'?"Ro'yxatdan o'tish shart emas":currentLang==='ru'?'Без регистрации':'No Registration',
-                    desc: currentLang==='uz'?'Parol va email kerak emas. Bosing va ishlang.':currentLang==='ru'?'Никакого пароля или email. Просто откройте.':'No password needed. Just open and work.',
+                    n:'03',
+                    icon: (
+                      <div style={{ width:52, height:52, borderRadius:16, background:'var(--grad-coral)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                          <path d="M16 3.13a4 4 0 0 1 0 7.75" strokeOpacity=".45"/>
+                        </svg>
+                      </div>
+                    ),
+                    grad: 'linear-gradient(135deg,rgba(253,151,253,.22) 0%,rgba(253,173,112,.14) 100%)',
+                    title: currentLang==='uz'?'Shaxsiy hisob — tez orada':currentLang==='ru'?'Личный кабинет — скоро':'Personal Account — Coming Soon',
+                    desc: currentLang==='uz'
+                      ?'Hujjatlar tarixi, shaxsiy shablonlar, jamoaviy tahrirlash va premium imkoniyatlar. Hisobingiz yaqinda ochiladi — kutib turing! 🚀'
+                      :currentLang==='ru'
+                      ?'История документов, личные шаблоны, совместное редактирование и премиум-функции. Аккаунт скоро откроется — ждите! 🚀'
+                      :'Document history, personal templates, team editing and premium features. Your account is coming soon — stay tuned! 🚀',
+                    badge: currentLang==='uz'?'Tez orada':currentLang==='ru'?'Скоро':'Coming soon',
                   },
                 ].map((f, i) => (
                   <div key={f.n} className={`card reveal reveal-d${i+1}`}
                     style={{
                       background: dk ? 'rgba(255,255,255,.05)' : f.grad,
                       border: `1.5px solid ${dk?'rgba(255,255,255,.08)':'rgba(29,28,28,.08)'}`,
+                      position:'relative', overflow:'hidden',
                     }}>
+                    {'badge' in f && f.badge && (
+                      <div style={{
+                        position:'absolute', top:16, right:16,
+                        padding:'4px 10px', borderRadius:20, fontSize:10, fontWeight:800,
+                        background: dk?'rgba(253,151,253,.2)':'rgba(253,151,253,.35)',
+                        color: dk?'#FD97FD':'#9d1b9e', letterSpacing:'0.04em', textTransform:'uppercase',
+                      }}>
+                        {f.badge}
+                      </div>
+                    )}
                     <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
-                      <span style={{ fontSize:32 }}>{f.emoji}</span>
+                      {f.icon}
                       <span style={{
                         fontSize:11, fontWeight:800, letterSpacing:'0.06em', textTransform:'uppercase',
-                        color: dk?'rgba(255,255,255,.2)':'rgba(29,28,28,.2)',
+                        color: dk?'rgba(255,255,255,.15)':'rgba(29,28,28,.18)',
                       }}>{f.n}</span>
                     </div>
-                    <h3 style={{ fontSize:'clamp(1.1rem,2.5vw,1.4rem)', fontWeight:700, marginBottom:10, color: dk?'#F2EFF8':'var(--ink)' }}>{f.title}</h3>
-                    <p style={{ fontSize:14, lineHeight:1.6, color: dk?'var(--ink-soft)':'rgba(29,28,28,.6)' }}>{f.desc}</p>
+                    <h3 style={{ fontSize:'clamp(1.1rem,2.5vw,1.35rem)', fontWeight:700, marginBottom:10, color: dk?'#F2EFF8':'var(--ink)' }}>{f.title}</h3>
+                    <p style={{ fontSize:14, lineHeight:1.65, color: dk?'var(--ink-soft)':'rgba(29,28,28,.6)' }}>{f.desc}</p>
                   </div>
                 ))}
               </div>
