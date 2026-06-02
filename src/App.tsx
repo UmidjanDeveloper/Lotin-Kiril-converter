@@ -1,6 +1,6 @@
 /**
  * @license SPDX-License-Identifier: Apache-2.0
- * Hujjat.uz — O'zbek matn va hujjatlar platformasi
+ * Hujjat.uz — Ultra Dark Premium redesign (Blue/Cyan theme)
  */
 
 import React, { useState, useEffect } from 'react';
@@ -14,11 +14,17 @@ import Logo from './components/Logo';
 import OpenSourceLabs from './components/OpenSourceLabs';
 import {
   FileText, Type, Sun, Moon, Shield, ArrowRight,
-  Zap, Sparkles, PenTool, Lock, BarChart3, ChevronRight,
-  Globe2, Check
+  Sparkles, PenTool, Lock, BarChart3, ChevronRight,
+  Globe2, Check, Zap, Clock, Trash2, FileDown, Layers
 } from 'lucide-react';
 
 type Tab = 'home' | 'lang' | 'docs' | 'ai' | 'prices' | 'opensource';
+
+interface HistoryEntry {
+  tool: string;
+  filename: string;
+  ts: number;
+}
 
 // ─── Root component ────────────────────────────────────────────────────────────
 
@@ -40,14 +46,29 @@ export default function App() {
   const [charsCount, setCharsCount] = useState(() =>
     parseInt(localStorage.getItem('uz_translit_chars_count') || '0', 10)
   );
+  const [history, setHistory] = useState<HistoryEntry[]>(() => {
+    try { return JSON.parse(localStorage.getItem('hz_history') || '[]'); } catch { return []; }
+  });
   const [devPanel, setDevPanel] = useState(false);
 
   useEffect(() => { localStorage.setItem('dimu_pro_lang', currentLang); }, [currentLang]);
   useEffect(() => { localStorage.setItem('dimu_pro_theme', theme); }, [theme]);
 
-  const handleFileProcessed = (chars: number) => {
+  const handleFileProcessed = (chars: number, tool?: string, filename?: string) => {
     setFilesCount(p => { const v = p + 1; localStorage.setItem('uz_translit_files_count', String(v)); return v; });
     setCharsCount(p => { const v = p + chars; localStorage.setItem('uz_translit_chars_count', String(v)); return v; });
+    if (tool && filename) {
+      setHistory(prev => {
+        const next = [{ tool, filename, ts: Date.now() }, ...prev].slice(0, 8);
+        localStorage.setItem('hz_history', JSON.stringify(next));
+        return next;
+      });
+    }
+  };
+
+  const clearHistory = () => {
+    setHistory([]);
+    localStorage.removeItem('hz_history');
   };
 
   const go = (tab: Tab) => setActiveTab(tab);
@@ -57,7 +78,7 @@ export default function App() {
   const dk = theme === 'dark';
 
   const NAV = [
-    { id: 'home',       label: t.homeTab },
+    { id: 'home',       label: currentLang === 'uz' ? 'Bosh sahifa' : currentLang === 'ru' ? 'Главная' : 'Home' },
     { id: 'lang',       label: t.langCenter },
     { id: 'docs',       label: t.docCenter },
     { id: 'ai',         label: t.aiCenter },
@@ -68,87 +89,114 @@ export default function App() {
   const TOOLS = [
     {
       id: 'lang' as Tab, Icon: Type,
-      color: 'text-indigo-500', bg: 'bg-indigo-500/10', ring: 'ring-indigo-500/30',
-      hoverBorder: dk ? 'hover:border-indigo-500/40' : 'hover:border-indigo-400',
-      title: t.langCenter, sub: 'Kirill ↔ Lotin · Tarjima · Sayqallash',
+      color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'hover:border-blue-500/30',
+      glow: 'hover:shadow-[0_0_25px_rgba(59,130,246,0.08)]',
+      title: t.langCenter, sub: 'Kirill ↔ Lotin · Tarjima',
       desc: currentLang === 'uz'
-        ? 'Matn va butun hujjatlarni transliteratsiya qiling, AI bilan tarjima va sayqallash.'
+        ? 'Matn va hujjatlarni transliteratsiya qiling. AI bilan tarjima va sayqallash.'
         : currentLang === 'ru'
-        ? 'Транслитерация текстов, ИИ-перевод на 5 языков и стилизация текста.'
-        : 'Transliterate texts, AI translation to 5 languages and text polishing.',
+        ? 'Транслитерация текстов, перевод и стилизация с ИИ.'
+        : 'Transliterate texts, AI translation and text polishing.',
     },
     {
-      id: 'docs' as Tab, Icon: FileText,
-      color: 'text-emerald-500', bg: 'bg-emerald-500/10', ring: 'ring-emerald-500/30',
-      hoverBorder: dk ? 'hover:border-emerald-500/40' : 'hover:border-emerald-400',
-      title: t.docCenter,
-      sub: '26+ PDF Tools · Shablonlar',
+      id: 'docs' as Tab, Icon: Layers,
+      color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'hover:border-emerald-500/30',
+      glow: 'hover:shadow-[0_0_25px_rgba(16,185,129,0.08)]',
+      title: t.docCenter, sub: '26+ PDF Tools · Shablonlar',
       desc: currentLang === 'uz'
-        ? 'PDF birlashtirish, bo\'lish, siqish, ariza, shartnoma, tavsifnoma shablonlari.'
+        ? 'PDF birlashtirish, bo\'lish, siqish. Ariza, shartnoma, tavsifnoma shablonlari.'
         : currentLang === 'ru'
-        ? 'Слияние, разделение, сжатие PDF, шаблоны заявлений и договоров.'
+        ? 'Слияние, разделение PDF. Шаблоны заявлений и договоров.'
         : 'Merge, split, compress PDF and professional Uzbek document templates.',
     },
     {
       id: 'ai' as Tab, Icon: Sparkles,
-      color: 'text-violet-500', bg: 'bg-violet-500/10', ring: 'ring-violet-500/30',
-      hoverBorder: dk ? 'hover:border-violet-500/40' : 'hover:border-violet-400',
-      title: t.aiCenter, sub: 'Gemini AI · Chat · Konspekt',
+      color: 'text-cyan-400', bg: 'bg-cyan-500/10', border: 'hover:border-cyan-500/30',
+      glow: 'hover:shadow-[0_0_25px_rgba(6,182,212,0.08)]',
+      title: t.aiCenter, sub: 'AI Chat · Konspekt · OCR',
       desc: currentLang === 'uz'
         ? 'Hujjatlarni konspektlash, AI chat va rasmiy shablonlarni AI bilan to\'ldirish.'
         : currentLang === 'ru'
-        ? 'Конспектирование документов, ИИ-чат и автозаполнение официальных шаблонов.'
-        : 'Summarize documents, AI chat and auto-fill official Uzbek document templates.',
+        ? 'Конспектирование документов, ИИ-чат и автозаполнение шаблонов.'
+        : 'Summarize documents, AI chat and auto-fill official document templates.',
     },
     {
       id: 'opensource' as Tab, Icon: PenTool,
-      color: 'text-amber-500', bg: 'bg-amber-500/10', ring: 'ring-amber-500/30',
-      hoverBorder: dk ? 'hover:border-amber-500/40' : 'hover:border-amber-400',
+      color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'hover:border-amber-500/30',
+      glow: 'hover:shadow-[0_0_25px_rgba(245,158,11,0.08)]',
       title: currentLang === 'uz' ? "Qo'lyozma Studiyasi" : currentLang === 'ru' ? 'Студия Почерка' : 'Handwriting Studio',
-      sub: 'WYSIWYG · Print · PDF · PNG',
+      sub: '8 Shrift · Jitter · PDF · PNG',
       desc: currentLang === 'uz'
-        ? 'Varoqning istalgan joyiga matn qo\'ying, suring va chop eting — Word kabi tahrirlash.'
+        ? 'Haqiqiy qo\'l yozuvi bilan hujjat yarating. Insoniy tebranish effekti bilan.'
         : currentLang === 'ru'
-        ? 'Размещайте текст в любом месте, перетаскивайте и печатайте как в Word.'
-        : 'Place text anywhere, drag to reposition and print — fully WYSIWYG.',
+        ? 'Создавайте документы с живым почерком и эффектом дрожания.'
+        : 'Create documents with real handwriting and human jitter effect.',
     },
   ] as const;
 
-  // ── Root className ─────────────────────────────────────────────────────────
-  const rootCls = `min-h-screen flex flex-col selection:bg-indigo-500/20 ${
-    dk ? 'bg-[#08090f] text-slate-100' : 'bg-slate-50 text-slate-900'
-  }`;
+  const STATS = [
+    { num: '26+',  label: currentLang === 'uz' ? 'PDF Asbob'   : currentLang === 'ru' ? 'PDF Инстр.' : 'PDF Tools'  },
+    { num: '8',    label: currentLang === 'uz' ? 'HW Shrift'   : currentLang === 'ru' ? 'HW Шрифт'  : 'HW Fonts'   },
+    { num: '100%', label: currentLang === 'uz' ? 'Xususiy'     : currentLang === 'ru' ? 'Приватно'  : 'Private'    },
+    { num: '0',    label: currentLang === 'uz' ? "Ro'yxat"     : currentLang === 'ru' ? 'Рег.'      : 'Sign-up'    },
+  ];
+
+  const TRUST_PILLS = [
+    '🔒 ' + (currentLang === 'uz' ? '100% Brauzerda' : currentLang === 'ru' ? '100% В браузере' : '100% In-Browser'),
+    '⚡ Kirill ↔ Lotin',
+    '📄 26+ PDF',
+    '✍️ ' + (currentLang === 'uz' ? "Qo'lyozma" : currentLang === 'ru' ? 'Почерк' : 'Handwriting'),
+    '🔑 ' + (currentLang === 'uz' ? "Ro'yxatsiz" : currentLang === 'ru' ? 'Без регистрации' : 'No Sign-up'),
+  ];
+
+  const toolLabelMap: Record<string, string> = {
+    pdfMerge: 'PDF Birlashtirish', pdfSplit: 'PDF Bo\'lish', pdfCompress: 'PDF Siqish',
+    jpgToPdf: 'JPG → PDF', wordToPdf: 'Word → PDF', watermark: 'Watermark',
+    lockPdf: 'PDF Parol', pdfRotate: 'PDF Aylantirish', ocrPdf: 'OCR',
+    transliterate: 'Transliteratsiya', handwriting: "Qo'lyozma",
+  };
+
+  // ── Root className ─────────────────────────────────────────────────────────────
+  const rootBg = dk ? 'bg-[#050608] text-slate-100' : 'bg-slate-50 text-slate-900';
 
   return (
-    <div className={rootCls}>
+    <div className={`min-h-screen flex flex-col selection:bg-blue-500/20 ${rootBg}`}>
 
-      {/* ════════════════════════════════════════
-          HEADER
-      ════════════════════════════════════════ */}
-      <header className={`sticky top-0 z-50 border-b backdrop-blur-md transition-colors ${
-        dk ? 'bg-[#08090f]/95 border-slate-800/80' : 'bg-white/95 border-slate-200'
+      {/* ══════════════════════════════════════════
+          HEADER — Ultra minimal, blur backdrop
+      ══════════════════════════════════════════ */}
+      <header className={`sticky top-0 z-50 border-b backdrop-blur-xl transition-colors ${
+        dk ? 'bg-[#050608]/85 border-[#1a2435]' : 'bg-white/95 border-slate-200'
       }`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-3">
 
           {/* Logo */}
           <button onClick={() => go('home')} className="flex items-center gap-2.5 shrink-0 group cursor-pointer">
-            <Logo size={34} />
+            <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-300 ${
+              dk
+                ? 'bg-gradient-to-br from-blue-600 to-cyan-600 shadow-[0_0_12px_rgba(59,130,246,0.4)] group-hover:shadow-[0_0_20px_rgba(59,130,246,0.6)]'
+                : 'bg-gradient-to-br from-blue-500 to-cyan-500 shadow-lg'
+            }`}>
+              <FileText className="w-4 h-4 text-white" />
+            </div>
             <div className="hidden sm:flex items-center gap-2">
               <span className={`text-sm font-black tracking-tight ${dk ? 'text-white' : 'text-slate-900'}`}>
                 {t.appName}
               </span>
-              {isPremium ? (
-                <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-md bg-indigo-500/15 text-indigo-400 border border-indigo-500/25">PRO</span>
-              ) : (
-                <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-md bg-slate-500/10 text-slate-400 border border-slate-500/20">FREE</span>
-              )}
+              <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded-md ${
+                isPremium
+                  ? 'bg-blue-500/15 text-blue-400 border border-blue-500/25'
+                  : dk ? 'bg-slate-800 text-slate-500 border border-slate-700' : 'bg-slate-100 text-slate-400 border border-slate-200'
+              }`}>
+                {isPremium ? 'PRO' : 'FREE'}
+              </span>
             </div>
           </button>
 
-          {/* Nav — scrollable on mobile */}
+          {/* Nav */}
           <nav className="flex-1 min-w-0 flex items-center justify-center">
             <div className={`flex items-center gap-0.5 p-1 rounded-xl border overflow-x-auto scrollbar-none ${
-              dk ? 'bg-slate-900/50 border-slate-800' : 'bg-slate-100 border-slate-200'
+              dk ? 'bg-[#0d1117] border-[#21262d]' : 'bg-slate-100 border-slate-200'
             }`}>
               {NAV.map(tab => (
                 <button
@@ -156,8 +204,10 @@ export default function App() {
                   onClick={() => go(tab.id as Tab)}
                   className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                     activeTab === tab.id
-                      ? dk ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white text-indigo-700 shadow-sm'
-                      : dk ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-900'
+                      ? dk
+                        ? 'bg-blue-600 text-white shadow-[0_0_10px_rgba(59,130,246,0.3)]'
+                        : 'bg-white text-blue-700 shadow-sm'
+                      : dk ? 'text-slate-500 hover:text-slate-200' : 'text-slate-500 hover:text-slate-900'
                   }`}
                 >
                   {tab.label}
@@ -169,21 +219,25 @@ export default function App() {
           {/* Controls */}
           <div className="flex items-center gap-1.5 shrink-0">
             <div className={`hidden sm:flex items-center gap-0.5 p-0.5 rounded-lg border ${
-              dk ? 'border-slate-800 bg-slate-900/50' : 'border-slate-200 bg-white'
+              dk ? 'border-[#21262d] bg-[#0d1117]' : 'border-slate-200 bg-white'
             }`}>
               {(['uz', 'ru', 'en'] as const).map(lng => (
                 <button key={lng} onClick={() => setCurrentLang(lng)}
                   className={`px-2 py-1 rounded-md text-[10px] font-black uppercase cursor-pointer transition ${
-                    currentLang === lng ? 'bg-indigo-600 text-white' : dk ? 'text-slate-500 hover:text-white' : 'text-slate-400 hover:text-slate-700'
+                    currentLang === lng
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : dk ? 'text-slate-500 hover:text-white' : 'text-slate-400 hover:text-slate-700'
                   }`}>
                   {lng === 'uz' ? "O'z" : lng}
                 </button>
               ))}
             </div>
             <button
-              onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
+              onClick={() => setTheme(th => th === 'dark' ? 'light' : 'dark')}
               className={`p-2 rounded-lg border cursor-pointer transition-all ${
-                dk ? 'border-slate-800 bg-slate-900/50 text-yellow-400 hover:bg-slate-800' : 'border-slate-200 bg-white text-amber-500 hover:bg-slate-100'
+                dk
+                  ? 'border-[#21262d] bg-[#0d1117] text-yellow-400 hover:border-yellow-500/30'
+                  : 'border-slate-200 bg-white text-amber-500 hover:bg-slate-50'
               }`}>
               {dk ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
             </button>
@@ -191,129 +245,188 @@ export default function App() {
         </div>
       </header>
 
-      {/* ════════════════════════════════════════
+      {/* ══════════════════════════════════════════
           MAIN
-      ════════════════════════════════════════ */}
+      ══════════════════════════════════════════ */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
         {/* ── HOME ── */}
         {activeTab === 'home' && (
-          <div className="space-y-16 animate-slide-up">
+          <div className="space-y-24 animate-slide-up">
 
-            {/* HERO */}
-            <section className="pt-10 pb-4 text-center max-w-3xl mx-auto space-y-6">
-              {/* Badge */}
-              <div className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold border ${
-                dk ? 'border-indigo-500/25 bg-indigo-950/40 text-indigo-300' : 'border-indigo-200 bg-indigo-50 text-indigo-600'
-              }`}>
-                <Zap className="w-3.5 h-3.5 fill-current opacity-80" />
-                {t.heroSub}
+            {/* ─── HERO ───────────────────────────────── */}
+            <section className="relative min-h-[82vh] flex flex-col items-center justify-center text-center overflow-hidden -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8">
+
+              {/* Background: Grid + blobs */}
+              <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                <div className="absolute inset-0 hero-grid opacity-60" />
+                <div
+                  className="absolute top-10 left-[15%] w-[600px] h-[600px] rounded-full blur-3xl animate-blob"
+                  style={{ background: 'radial-gradient(circle, rgba(59,130,246,0.09) 0%, transparent 70%)' }}
+                />
+                <div
+                  className="absolute bottom-0 right-[10%] w-[500px] h-[500px] rounded-full blur-3xl animate-blob"
+                  style={{ background: 'radial-gradient(circle, rgba(6,182,212,0.07) 0%, transparent 70%)', animationDelay: '3s' }}
+                />
+                <div
+                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] rounded-full blur-3xl"
+                  style={{ background: 'radial-gradient(ellipse, rgba(59,130,246,0.04) 0%, transparent 60%)' }}
+                />
               </div>
 
-              {/* Headline */}
-              <h1 className={`text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.08] ${dk ? 'text-white' : 'text-slate-900'}`}>
-                {currentLang === 'uz' ? (
-                  <>
-                    O'zbek hujjatlar<br />
-                    <span className="text-indigo-500">platformasi №1</span>
-                  </>
-                ) : currentLang === 'ru' ? (
-                  <>
-                    Платформа №1<br />
-                    <span className="text-indigo-500">для документов на узбекском</span>
-                  </>
-                ) : (
-                  <>
-                    Uzbekistan's<br />
-                    <span className="text-indigo-500">#1 Document Platform</span>
-                  </>
-                )}
-              </h1>
+              {/* Content */}
+              <div className="relative z-10 max-w-4xl mx-auto flex flex-col items-center gap-8">
 
-              {/* Sub */}
-              <p className={`text-base sm:text-lg leading-relaxed ${dk ? 'text-slate-400' : 'text-slate-500'}`}>
-                {t.appPositioning}
-              </p>
+                {/* Badge */}
+                <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full border text-xs font-bold ${
+                  dk
+                    ? 'border-blue-500/20 bg-blue-500/5 text-blue-400'
+                    : 'border-blue-200 bg-blue-50 text-blue-600'
+                }`}>
+                  <Zap className="w-3.5 h-3.5 fill-current opacity-80" />
+                  {currentLang === 'uz'
+                    ? "O'zbekiston Hujjat Platformasi №1"
+                    : currentLang === 'ru'
+                    ? 'Платформа документов №1 в Узбекистане'
+                    : "Uzbekistan's #1 Document Platform"}
+                </div>
 
-              {/* CTAs */}
-              <div className="flex flex-wrap items-center justify-center gap-3">
-                <button
-                  onClick={() => go('docs')}
-                  className="inline-flex items-center gap-2 px-6 py-3 text-sm font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white transition cursor-pointer shadow-lg shadow-indigo-600/25"
-                >
-                  {currentLang === 'uz' ? 'Hozir boshlash' : currentLang === 'ru' ? 'Начать сейчас' : 'Get Started'}
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => go('lang')}
-                  className={`inline-flex items-center gap-2 px-6 py-3 text-sm font-bold rounded-xl border transition cursor-pointer ${
-                    dk ? 'border-slate-700 text-slate-300 hover:border-slate-600 hover:bg-slate-900' : 'border-slate-300 text-slate-700 hover:bg-white hover:shadow-sm'
-                  }`}
-                >
-                  <Globe2 className="w-4 h-4" />
-                  {t.langCenter}
-                </button>
-              </div>
+                {/* Heading */}
+                <h1 className={`text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-[1.04] ${
+                  dk ? 'text-white' : 'text-slate-900'
+                }`}>
+                  {currentLang === 'uz' ? (
+                    <>
+                      Hujjatlaringizni<br />
+                      <span className="bg-gradient-to-r from-blue-400 via-blue-300 to-cyan-400 bg-clip-text text-transparent">
+                        biz bilan osonlashtiring
+                      </span>
+                    </>
+                  ) : currentLang === 'ru' ? (
+                    <>
+                      Управляйте<br />
+                      <span className="bg-gradient-to-r from-blue-400 via-blue-300 to-cyan-400 bg-clip-text text-transparent">
+                        документами легко
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      Manage your documents<br />
+                      <span className="bg-gradient-to-r from-blue-400 via-blue-300 to-cyan-400 bg-clip-text text-transparent">
+                        effortlessly
+                      </span>
+                    </>
+                  )}
+                </h1>
 
-              {/* Trust pills */}
-              <div className="flex flex-wrap justify-center gap-2 pt-2">
-                {[
-                  '🔒 ' + (currentLang === 'uz' ? '100% Brauzerda' : currentLang === 'ru' ? '100% В браузере' : '100% In-Browser'),
-                  '⚡ Kirill ↔ Lotin',
-                  '📄 26+ PDF',
-                  '🤖 Gemini AI',
-                  '✍️ ' + (currentLang === 'uz' ? "Qo'lyozma" : currentLang === 'ru' ? 'Почерк' : 'Handwriting'),
-                  '🔑 ' + (currentLang === 'uz' ? "Ro'yxatsiz" : currentLang === 'ru' ? 'Без регистрации' : 'No Sign-up'),
-                ].map(p => (
-                  <span key={p} className={`text-[11px] font-medium px-2.5 py-1 rounded-full border ${
-                    dk ? 'border-slate-800 bg-slate-900/50 text-slate-400' : 'border-slate-200 bg-white text-slate-500'
-                  }`}>{p}</span>
-                ))}
+                {/* Subtitle */}
+                <p className={`text-base sm:text-lg leading-relaxed max-w-2xl ${dk ? 'text-slate-400' : 'text-slate-500'}`}>
+                  {t.appPositioning}
+                </p>
+
+                {/* CTAs */}
+                <div className="flex flex-wrap items-center justify-center gap-4">
+                  <button
+                    onClick={() => go('docs')}
+                    className="inline-flex items-center gap-2 px-7 py-3.5 text-sm font-bold rounded-2xl text-white cursor-pointer transition-all duration-300
+                      bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500
+                      shadow-[0_0_25px_rgba(59,130,246,0.3)] hover:shadow-[0_0_40px_rgba(59,130,246,0.5)]
+                      active:scale-95"
+                  >
+                    {currentLang === 'uz' ? 'Hozir Boshlash' : currentLang === 'ru' ? 'Начать сейчас' : 'Get Started'}
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => go('lang')}
+                    className={`inline-flex items-center gap-2 px-7 py-3.5 text-sm font-bold rounded-2xl border cursor-pointer transition-all duration-300 active:scale-95 ${
+                      dk
+                        ? 'border-[#21262d] text-slate-300 hover:border-blue-500/40 hover:text-white hover:bg-blue-500/5'
+                        : 'border-slate-300 text-slate-700 hover:border-blue-400 hover:bg-blue-50'
+                    }`}
+                  >
+                    <Globe2 className="w-4 h-4" />
+                    {t.langCenter}
+                  </button>
+                </div>
+
+                {/* Stats */}
+                <div className="flex flex-wrap justify-center gap-x-12 gap-y-5 pt-2">
+                  {STATS.map(s => (
+                    <div key={s.label} className="text-center">
+                      <div className="text-3xl sm:text-4xl font-black bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
+                        {s.num}
+                      </div>
+                      <div className={`text-xs font-semibold mt-1 ${dk ? 'text-slate-500' : 'text-slate-400'}`}>
+                        {s.label}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Trust pills */}
+                <div className="flex flex-wrap justify-center gap-2">
+                  {TRUST_PILLS.map(p => (
+                    <span key={p} className={`text-[11px] font-medium px-3 py-1.5 rounded-full border ${
+                      dk
+                        ? 'border-[#21262d] bg-[#0d1117] text-slate-400'
+                        : 'border-slate-200 bg-white text-slate-500'
+                    }`}>
+                      {p}
+                    </span>
+                  ))}
+                </div>
               </div>
             </section>
 
-            {/* DIVIDER */}
-            <div className={`border-t ${dk ? 'border-slate-800/60' : 'border-slate-100'}`} />
-
-            {/* TOOL CARDS */}
+            {/* ─── TOOL CARDS ─────────────────────────── */}
             <section>
-              <p className={`text-[10px] font-black uppercase tracking-[0.2em] font-mono text-center mb-6 ${dk ? 'text-slate-600' : 'text-slate-400'}`}>
-                {t.chooseService}
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="flex items-center justify-between mb-8">
+                <p className={`text-[10px] font-black uppercase tracking-[0.2em] font-mono ${
+                  dk ? 'text-slate-600' : 'text-slate-400'
+                }`}>
+                  {t.chooseService}
+                </p>
+                <div className={`h-px flex-1 ml-6 ${dk ? 'bg-[#21262d]' : 'bg-slate-100'}`} />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
                 {TOOLS.map(card => (
                   <div
                     key={card.id}
                     onClick={() => go(card.id)}
-                    className={`group relative p-6 rounded-2xl border cursor-pointer transition-all duration-200 ${
+                    className={`group relative p-6 rounded-2xl border cursor-pointer transition-all duration-300 card-glow ${
                       dk
-                        ? `bg-slate-900/40 border-slate-800 ${card.hoverBorder} hover:bg-slate-900/70`
-                        : `bg-white border-slate-200 ${card.hoverBorder} hover:shadow-md`
+                        ? `bg-[#0d1117] border-[#21262d] ${card.border}`
+                        : `bg-white border-slate-200 ${card.border} hover:shadow-md`
                     }`}
                   >
                     {/* Icon */}
-                    <div className={`w-12 h-12 rounded-2xl ${card.bg} flex items-center justify-center mb-5 transition-transform duration-200 group-hover:scale-110`}>
+                    <div className={`w-12 h-12 rounded-xl ${card.bg} flex items-center justify-center mb-5 transition-all duration-300 group-hover:scale-110`}>
                       <card.Icon className={`w-5 h-5 ${card.color}`} />
                     </div>
 
-                    {/* Sub label */}
-                    <p className={`text-[10px] font-mono font-bold uppercase tracking-widest mb-1.5 ${dk ? 'text-slate-500' : 'text-slate-400'}`}>
+                    {/* Sub */}
+                    <p className={`text-[10px] font-mono font-bold uppercase tracking-widest mb-2 ${dk ? 'text-slate-600' : 'text-slate-400'}`}>
                       {card.sub}
                     </p>
 
                     {/* Title */}
-                    <h3 className={`text-sm font-bold mb-2.5 ${dk ? 'text-white' : 'text-slate-900'}`}>
+                    <h3 className={`text-sm font-bold mb-2.5 transition-colors ${
+                      dk ? 'text-slate-100 group-hover:text-blue-400' : 'text-slate-900 group-hover:text-blue-600'
+                    }`}>
                       {card.title}
                     </h3>
 
                     {/* Desc */}
-                    <p className={`text-xs leading-relaxed ${dk ? 'text-slate-400' : 'text-slate-500'}`}>
+                    <p className={`text-xs leading-relaxed ${dk ? 'text-slate-500' : 'text-slate-500'}`}>
                       {card.desc}
                     </p>
 
                     {/* CTA */}
-                    <div className={`mt-5 pt-4 border-t flex items-center gap-1.5 text-xs font-bold transition-all group-hover:gap-2.5 ${
-                      dk ? `border-slate-800 ${card.color}` : `border-slate-100 ${card.color}`
+                    <div className={`mt-5 pt-4 border-t flex items-center gap-1.5 text-xs font-bold transition-all duration-300 group-hover:gap-3 ${
+                      dk
+                        ? `border-[#21262d] text-slate-600 group-hover:${card.color}`
+                        : `border-slate-100 text-slate-400 group-hover:text-blue-600`
                     }`}>
                       {currentLang === 'uz' ? 'Ochish' : currentLang === 'ru' ? 'Открыть' : 'Open'}
                       <ArrowRight className="w-3.5 h-3.5" />
@@ -323,66 +436,115 @@ export default function App() {
               </div>
             </section>
 
-            {/* DIVIDER */}
-            <div className={`border-t ${dk ? 'border-slate-800/60' : 'border-slate-100'}`} />
+            {/* ─── RECENT HISTORY ─────────────────────── */}
+            {history.length > 0 && (
+              <section>
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-2.5">
+                    <Clock className={`w-4 h-4 ${dk ? 'text-blue-400' : 'text-blue-600'}`} />
+                    <h2 className={`text-sm font-bold ${dk ? 'text-white' : 'text-slate-900'}`}>
+                      {currentLang === 'uz' ? 'Oxirgi Amallar' : currentLang === 'ru' ? 'Последние операции' : 'Recent Activity'}
+                    </h2>
+                    <span className={`text-[10px] font-mono font-black px-2 py-0.5 rounded-full ${
+                      dk ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-blue-50 text-blue-600 border border-blue-100'
+                    }`}>{history.length}</span>
+                  </div>
+                  <button
+                    onClick={clearHistory}
+                    className={`flex items-center gap-1.5 text-xs font-semibold cursor-pointer transition ${
+                      dk ? 'text-slate-600 hover:text-rose-400' : 'text-slate-400 hover:text-rose-500'
+                    }`}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    {currentLang === 'uz' ? 'Tozalash' : currentLang === 'ru' ? 'Очистить' : 'Clear'}
+                  </button>
+                </div>
+                <div className={`rounded-2xl border divide-y ${
+                  dk ? 'bg-[#0d1117] border-[#21262d] divide-[#21262d]' : 'bg-white border-slate-200 divide-slate-100'
+                }`}>
+                  {history.map((entry, i) => (
+                    <div key={i} className="flex items-center justify-between px-5 py-3.5 gap-4">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${dk ? 'bg-blue-500/10' : 'bg-blue-50'}`}>
+                          <FileDown className="w-3.5 h-3.5 text-blue-500" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className={`text-xs font-semibold truncate ${dk ? 'text-slate-200' : 'text-slate-800'}`}>
+                            {entry.filename}
+                          </p>
+                          <p className={`text-[10px] font-mono ${dk ? 'text-slate-600' : 'text-slate-400'}`}>
+                            {toolLabelMap[entry.tool] || entry.tool}
+                          </p>
+                        </div>
+                      </div>
+                      <span className={`text-[10px] font-mono whitespace-nowrap ${dk ? 'text-slate-600' : 'text-slate-400'}`}>
+                        {new Date(entry.ts).toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
 
-            {/* FEATURE HIGHLIGHTS */}
+            {/* ─── FEATURE HIGHLIGHTS ─────────────────── */}
             <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {[
                 {
-                  icon: <Zap className="w-5 h-5 text-indigo-400" />,
-                  bg: 'bg-indigo-500/8',
-                  title: currentLang === 'uz' ? 'Tez va ishonchli' : currentLang === 'ru' ? 'Быстро и надёжно' : 'Fast & Reliable',
+                  icon: <Zap className="w-5 h-5 text-blue-400" />,
+                  bg: dk ? 'bg-blue-500/8 border-blue-500/10' : 'bg-blue-50 border-blue-100',
+                  title: currentLang === 'uz' ? 'Tez va aniq' : currentLang === 'ru' ? 'Быстро и точно' : 'Fast & Accurate',
                   desc: currentLang === 'uz'
-                    ? 'Gemini AI va mahalliy algoritmlar bilan yuqori aniqlikda ishlov bering. Bir necha soniyada tayyor.'
+                    ? 'Mahalliy algoritmlar bilan yuqori aniqlikda ishlov bering. Bir necha soniyada natija.'
                     : currentLang === 'ru'
-                    ? 'Gemini AI и локальные алгоритмы обеспечивают высокую точность. Результат за секунды.'
-                    : 'Gemini AI and local algorithms deliver high accuracy. Results in seconds.',
+                    ? 'Локальные алгоритмы обеспечивают высокую точность. Результат за секунды.'
+                    : 'Local algorithms deliver high accuracy results in seconds.',
                 },
                 {
                   icon: <Lock className="w-5 h-5 text-emerald-400" />,
-                  bg: 'bg-emerald-500/8',
-                  title: currentLang === 'uz' ? 'Maxfiylik kafolati' : currentLang === 'ru' ? 'Гарантия конфиденциальности' : 'Privacy Guaranteed',
+                  bg: dk ? 'bg-emerald-500/8 border-emerald-500/10' : 'bg-emerald-50 border-emerald-100',
+                  title: currentLang === 'uz' ? 'Maxfiylik kafolati' : currentLang === 'ru' ? 'Конфиденциальность' : 'Privacy First',
                   desc: currentLang === 'uz'
-                    ? 'Fayllaringiz serverga yuklanmaydi. Hamma narsa faqat brauzeringizda ishlaydi.'
+                    ? 'Fayllaringiz serverga yuklanmaydi. Hamma narsa faqat brauzeringizda.'
                     : currentLang === 'ru'
                     ? 'Ваши файлы не покидают браузер. Никакой загрузки на сервер.'
-                    : 'Your files never leave your browser. Zero server upload.',
+                    : 'Your files never leave the browser. Zero server upload.',
                 },
                 {
-                  icon: <Check className="w-5 h-5 text-amber-400" />,
-                  bg: 'bg-amber-500/8',
+                  icon: <Check className="w-5 h-5 text-cyan-400" />,
+                  bg: dk ? 'bg-cyan-500/8 border-cyan-500/10' : 'bg-cyan-50 border-cyan-100',
                   title: currentLang === 'uz' ? "Ro'yxatdan o'tish shart emas" : currentLang === 'ru' ? 'Без регистрации' : 'No Registration',
                   desc: currentLang === 'uz'
-                    ? 'Parol va email kerak emas. Bosing va ishlang — shuncha oddiy.'
+                    ? 'Parol va email kerak emas. Bosing va ishlang.'
                     : currentLang === 'ru'
                     ? 'Никакого пароля или email. Просто откройте и работайте.'
-                    : 'No password or email needed. Just open and work.',
+                    : 'No password needed. Just open and work.',
                 },
               ].map(f => (
-                <div key={f.title} className={`p-5 rounded-2xl border ${dk ? 'border-slate-800 bg-slate-900/30' : 'border-slate-200 bg-white'}`}>
-                  <div className={`w-10 h-10 rounded-xl ${f.bg} flex items-center justify-center mb-4`}>
+                <div key={f.title} className={`p-5 rounded-2xl border ${dk ? 'bg-[#0d1117]' : 'bg-white'} ${f.bg}`}>
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-4 ${
+                    dk ? 'bg-[#0d1117]' : 'bg-white'
+                  } border ${f.bg}`}>
                     {f.icon}
                   </div>
                   <h3 className={`text-sm font-bold mb-2 ${dk ? 'text-white' : 'text-slate-900'}`}>{f.title}</h3>
-                  <p className={`text-xs leading-relaxed ${dk ? 'text-slate-400' : 'text-slate-500'}`}>{f.desc}</p>
+                  <p className={`text-xs leading-relaxed ${dk ? 'text-slate-500' : 'text-slate-500'}`}>{f.desc}</p>
                 </div>
               ))}
             </section>
 
-            {/* STATS (only when user has data) */}
+            {/* ─── USAGE STATS (only if user has data) ── */}
             {(filesCount > 0 || charsCount > 0) && (
               <section className={`flex flex-wrap items-center justify-center gap-6 p-5 rounded-2xl border ${
-                dk ? 'bg-slate-900/30 border-slate-800' : 'bg-white border-slate-200'
+                dk ? 'bg-[#0d1117] border-[#21262d]' : 'bg-white border-slate-200'
               }`}>
                 <div className="flex items-center gap-2">
-                  <BarChart3 className="w-4 h-4 text-indigo-500" />
+                  <BarChart3 className="w-4 h-4 text-blue-500" />
                   <span className={`text-sm ${dk ? 'text-slate-400' : 'text-slate-600'}`}>
                     {t.statsFiles}:{' '}
                     <strong className={dk ? 'text-white' : 'text-slate-900'}>{filesCount}</strong>
                   </span>
                 </div>
-                <div className={`hidden sm:block w-px h-4 ${dk ? 'bg-slate-700' : 'bg-slate-200'}`} />
+                <div className={`hidden sm:block w-px h-4 ${dk ? 'bg-[#21262d]' : 'bg-slate-200'}`} />
                 <span className={`text-sm ${dk ? 'text-slate-400' : 'text-slate-600'}`}>
                   {t.statsChars}:{' '}
                   <strong className={dk ? 'text-white' : 'text-slate-900'}>~{charsCount.toLocaleString()}</strong>
@@ -393,27 +555,31 @@ export default function App() {
                     localStorage.removeItem('uz_translit_chars_count');
                     setFilesCount(0); setCharsCount(0);
                   }}
-                  className="text-xs text-rose-500 hover:underline cursor-pointer font-semibold ml-auto"
+                  className="text-xs text-rose-500 hover:text-rose-400 cursor-pointer font-semibold ml-auto"
                 >
                   {t.statsReset}
                 </button>
               </section>
             )}
 
-            {/* PRIVACY BANNER */}
+            {/* ─── PRIVACY BANNER ─────────────────────── */}
             <section className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-2xl border ${
-              dk ? 'bg-slate-900/40 border-slate-800 text-slate-300' : 'bg-indigo-50/70 border-indigo-100 text-indigo-900'
+              dk
+                ? 'bg-blue-950/20 border-blue-900/30 text-slate-300'
+                : 'bg-blue-50/70 border-blue-100 text-blue-900'
             }`}>
               <div className="flex items-center gap-3">
-                <Shield className={`w-5 h-5 shrink-0 ${dk ? 'text-indigo-400' : 'text-indigo-500'}`} />
+                <Shield className={`w-5 h-5 shrink-0 ${dk ? 'text-blue-400' : 'text-blue-500'}`} />
                 <p className="text-xs sm:text-sm font-medium leading-relaxed">
-                  <span className={`font-bold ${dk ? 'text-indigo-400' : 'text-indigo-600'}`}>{t.badgePrivate}:</span>{' '}
+                  <span className={`font-bold ${dk ? 'text-blue-400' : 'text-blue-600'}`}>{t.badgePrivate}:</span>{' '}
                   {t.privacyBanner}
                 </p>
               </div>
               <button
                 onClick={() => go('prices')}
-                className={`text-xs font-bold shrink-0 flex items-center gap-1 whitespace-nowrap ${dk ? 'text-indigo-400' : 'text-indigo-600'} hover:underline cursor-pointer`}
+                className={`text-xs font-bold shrink-0 flex items-center gap-1 whitespace-nowrap cursor-pointer hover:underline ${
+                  dk ? 'text-blue-400' : 'text-blue-600'
+                }`}
               >
                 {t.pricingDetails}
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -424,100 +590,85 @@ export default function App() {
 
         {/* ── OTHER TABS ── */}
         {activeTab === 'lang' && (
-          <LanguageCenter
-            currentLang={currentLang}
-            theme={theme}
-            onFileProcessed={handleFileProcessed}
-            onSendToHandwriting={sendToHandwriting}
-          />
+          <LanguageCenter currentLang={currentLang} theme={theme} onFileProcessed={handleFileProcessed} onSendToHandwriting={sendToHandwriting} />
         )}
         {activeTab === 'docs' && (
-          <DocumentCenter
-            currentLang={currentLang}
-            theme={theme}
-            onSendToHandwriting={sendToHandwriting}
-          />
+          <DocumentCenter currentLang={currentLang} theme={theme} onSendToHandwriting={sendToHandwriting} />
         )}
         {activeTab === 'ai' && (
-          <AiCenter
-            currentLang={currentLang}
-            theme={theme}
-            onSendToHandwriting={sendToHandwriting}
-          />
+          <AiCenter currentLang={currentLang} theme={theme} onSendToHandwriting={sendToHandwriting} />
         )}
         {activeTab === 'prices' && (
           <PricingSection
-            currentLang={currentLang}
-            theme={theme}
+            currentLang={currentLang} theme={theme}
             onUpgradeSuccess={() => { setIsPremium(true); localStorage.setItem('dimu_pro_premium', 'true'); }}
             isPremium={isPremium}
           />
         )}
         {activeTab === 'opensource' && (
-          <OpenSourceLabs
-            currentLang={currentLang}
-            theme={theme}
-            sharedHandwriteText={sharedHandwriteText}
-            clearSharedHandwriteText={() => setSharedHandwriteText('')}
-          />
+          <OpenSourceLabs currentLang={currentLang} theme={theme} sharedHandwriteText={sharedHandwriteText} clearSharedHandwriteText={() => setSharedHandwriteText('')} />
         )}
       </main>
 
-      {/* ════════════════════════════════════════
+      {/* ══════════════════════════════════════════
           FOOTER
-      ════════════════════════════════════════ */}
-      <footer className={`border-t mt-8 py-10 ${dk ? 'border-slate-800/70 bg-slate-950/60' : 'border-slate-200 bg-white'}`}>
+      ══════════════════════════════════════════ */}
+      <footer className={`border-t mt-8 py-10 ${dk ? 'border-[#1a2435] bg-[#050608]' : 'border-slate-200 bg-white'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+
+          {/* Logo + tagline */}
+          <div className="flex flex-col items-center gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center">
+                <FileText className="w-3.5 h-3.5 text-white" />
+              </div>
+              <span className={`text-sm font-black ${dk ? 'text-white' : 'text-slate-900'}`}>{t.appName}</span>
+            </div>
+            <p className={`text-xs ${dk ? 'text-slate-600' : 'text-slate-400'}`}>
+              {currentLang === 'uz'
+                ? "O'zbekiston uchun ❤️ bilan yaratildi — fayllar serverga yuklanmaydi"
+                : currentLang === 'ru'
+                ? "Сделано с ❤️ для Узбекистана — файлы не покидают браузер"
+                : "Made with ❤️ for Uzbekistan — files never leave your browser"}
+            </p>
+          </div>
+
+          <div className={`border-t ${dk ? 'border-[#1a2435]' : 'border-slate-100'}`} />
 
           {/* Nav links */}
           <div className="flex flex-wrap justify-center gap-x-6 gap-y-2">
             {NAV.map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => go(tab.id as Tab)}
-                className={`text-xs font-semibold cursor-pointer hover:text-indigo-500 transition ${dk ? 'text-slate-500' : 'text-slate-400'}`}
-              >
+              <button key={tab.id} onClick={() => go(tab.id as Tab)}
+                className={`text-xs font-semibold cursor-pointer transition hover:text-blue-500 ${dk ? 'text-slate-600' : 'text-slate-400'}`}>
                 {tab.label}
               </button>
             ))}
           </div>
 
-          <div className={`border-t ${dk ? 'border-slate-800/60' : 'border-slate-100'}`} />
-
           {/* Feature tags */}
           <div className="flex flex-wrap justify-center gap-2">
-            {[
-              'Kirill ↔ Lotin', 'AI Tarjima', '26+ PDF Tools',
-              "Qo'lyozma", 'OCR', 'Ariza · Shartnoma · Tavsifnoma',
-            ].map(f => (
-              <span key={f} className={`text-[10px] font-medium px-2.5 py-1 rounded-full border ${dk ? 'border-slate-800 text-slate-500' : 'border-slate-200 text-slate-400'}`}>
+            {['Kirill ↔ Lotin', 'AI Tarjima', '26+ PDF Tools', "Qo'lyozma", 'OCR', 'Ariza · Shartnoma'].map(f => (
+              <span key={f} className={`text-[10px] font-medium px-2.5 py-1 rounded-full border ${
+                dk ? 'border-[#21262d] text-slate-600' : 'border-slate-200 text-slate-400'
+              }`}>
                 {f}
               </span>
             ))}
           </div>
 
           {/* Copyright */}
-          <div className="text-center space-y-1.5">
-            <p
-              className={`text-xs font-semibold select-none cursor-default ${dk ? 'text-slate-500' : 'text-slate-400'}`}
-              onDoubleClick={() => setDevPanel(v => !v)}
-            >
-              © {new Date().getFullYear()}{' '}
-              <span className="text-indigo-500 font-bold">{t.appName}</span>
-              {' '}—{' '}{t.appSlogan}
-            </p>
-            <p className={`text-[11px] ${dk ? 'text-slate-600' : 'text-slate-300'}`}>
-              {currentLang === 'uz'
-                ? "O'zbekiston uchun ❤️ bilan yaratildi — fayllar serverga yuklanmaydi"
-                : currentLang === 'ru'
-                ? "Сделано с ❤️ для Узбекистана — файлы не покидают ваш браузер"
-                : "Made with ❤️ for Uzbekistan — files never leave your browser"}
-            </p>
-          </div>
+          <p
+            className={`text-center text-xs font-semibold select-none cursor-default ${dk ? 'text-slate-600' : 'text-slate-400'}`}
+            onDoubleClick={() => setDevPanel(v => !v)}
+          >
+            © {new Date().getFullYear()}{' '}
+            <span className="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent font-bold">{t.appName}</span>
+            {' '}—{' '}{t.appSlogan}
+          </p>
 
           {/* Dev panel */}
           {devPanel && (
-            <div className={`mx-auto max-w-xs p-4 rounded-2xl border text-xs ${dk ? 'bg-slate-900 border-slate-700' : 'bg-slate-100 border-slate-300'}`}>
+            <div className={`mx-auto max-w-xs p-4 rounded-2xl border text-xs ${dk ? 'bg-[#0d1117] border-[#21262d]' : 'bg-slate-100 border-slate-300'}`}>
               <p className={`font-mono font-bold mb-2 ${dk ? 'text-slate-400' : 'text-slate-500'}`}>Dev: AI Provider Override</p>
               <AdminAIProvider />
             </div>
