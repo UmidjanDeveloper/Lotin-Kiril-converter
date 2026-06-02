@@ -53,6 +53,33 @@ const FONTS: { id: HWFont; sample: string }[] = [
   { id: 'Schoolbell',    sample: 'Schoolbell'    },
 ];
 
+// HandWriter-inspired: each font has 2 visually similar variant fonts.
+// When jitter > 3, some characters randomly use a variant — mimicking natural
+// per-character variation found in real handwriting datasets.
+const FONT_VARIANTS: Partial<Record<HWFont, HWFont[]>> = {
+  'Caveat':        ['Kalam', 'Patrick Hand'],
+  'Kalam':         ['Caveat', 'Patrick Hand'],
+  'Patrick Hand':  ['Kalam', 'Indie Flower'],
+  'Indie Flower':  ['Patrick Hand', 'Schoolbell'],
+  'Marck Script':  ['Bad Script'],
+  'Bad Script':    ['Marck Script'],
+  'Reenie Beanie': ['Schoolbell'],
+  'Schoolbell':    ['Reenie Beanie', 'Indie Flower'],
+};
+
+/** Guarantees all font weights are loaded before canvas rendering. */
+async function ensureFontsLoaded(fontName: HWFont, size: number): Promise<void> {
+  const allFonts = [fontName, ...(FONT_VARIANTS[fontName] ?? [])];
+  await Promise.allSettled(
+    allFonts.flatMap(f => [
+      document.fonts.load(`${size}px "${f}"`),
+      document.fonts.load(`bold ${size}px "${f}"`),
+      document.fonts.load(`italic ${size}px "${f}"`),
+    ])
+  );
+  await document.fonts.ready;
+}
+
 const PENS = [
   { hex: '#2563eb', cls: 'bg-blue-600',  label: "Ko'k"  },
   { hex: '#1e3a8a', cls: 'bg-blue-900',  label: "To'q"  },
@@ -124,6 +151,7 @@ export default function OpenSourceLabs({
   const [lh,    setLh]        = useState(38);
   const [zoom,  setZoom]      = useState(0.85);
   const [jitter, setJitter]   = useState(3);
+  const [exporting, setExporting] = useState(false);
 
   // Toolbar state (per-block or global for textarea mode)
   const [bold,    setBold]    = useState(false);
@@ -242,16 +270,23 @@ export default function OpenSourceLabs({
       for (let y = 0; y < canvas.height; y += gs) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
     }
 
-    // Text rendering helper with optional per-character jitter
+    // Text rendering — authentic handwriting simulation.
+    // Technique inspired by GDGVIT/HandWriter: per-character variation via
+    // font variants, position jitter, rotation, ink-pressure alpha, and
+    // natural baseline drift per line.
     const drawText = (t: string, startX: number, startY: number, maxW: number, opts: { font: HWFont; size: number; color: string; bold: boolean; italic: boolean; underline: boolean }) => {
-      const fs = `${opts.italic ? 'italic ' : ''}${opts.bold ? 'bold ' : ''}${opts.size * S}px "${opts.font}", cursive`;
-      ctx.font = fs;
+      const baseFont = (sz: number, f: string) =>
+        `${opts.italic ? 'italic ' : ''}${opts.bold ? 'bold ' : ''}${sz}px "${f}", cursive`;
+      const baseFontStr = baseFont(opts.size * S, opts.font);
+      ctx.font = baseFontStr;
       ctx.fillStyle = opts.color;
       const step = lh * S;
       const lines = t.split('\n');
       let cy = startY;
+
       for (const line of lines) {
         if (cy > canvas.height - 20) break;
+        ctx.font = baseFontStr;
         const words = line.split(' ');
         let cur = '';
         const wrapped: string[] = [];
@@ -261,32 +296,61 @@ export default function OpenSourceLabs({
           else cur = test;
         }
         if (cur) wrapped.push(cur);
+
         for (const wl of wrapped) {
           if (cy > canvas.height - 20) break;
+
           if (jitter > 0) {
+            // Per-line natural baseline drift (simulates hand tiredness)
+            const lineDrift = (Math.random() - 0.5) * jitter * S * 0.25;
             let cx = startX;
+
             for (const char of wl) {
-              const charW = ctx.measureText(char).width;
-              const jx = (Math.random() - 0.5) * jitter * S * 0.9;
-              const jy = (Math.random() - 0.5) * jitter * S * 0.65;
-              const angle = (Math.random() - 0.5) * jitter * 0.007;
-              const sizeVar = 1 + (Math.random() - 0.5) * jitter * 0.018;
+              ctx.font = baseFontStr;
+              const baseCharW = ctx.measureText(char).width;
+
+              // Per-character offsets
+              const jx    = (Math.random() - 0.5) * jitter * S * 0.85;
+              const jy    = (Math.random() - 0.5) * jitter * S * 0.6 + lineDrift;
+              const angle = (Math.random() - 0.5) * jitter * 0.0065;
+              const sizeV = 1 + (Math.random() - 0.5) * jitter * 0.02;
+
+              // Ink-pressure: alpha varies 0.75–1.0 (heavier vs lighter strokes)
+              const alpha = 0.75 + Math.random() * 0.25;
+
+              // HandWriter-style font variant: ~20% chance when jitter ≥ 4
+              const variants = FONT_VARIANTS[opts.font];
+              const useVariant = jitter >= 4 && variants && Math.random() < 0.20;
+              const charFont = useVariant
+                ? variants![Math.floor(Math.random() * variants!.length)]
+                : opts.font;
+
               ctx.save();
               ctx.translate(cx + jx, cy + jy);
               ctx.rotate(angle);
-              ctx.font = `${opts.italic ? 'italic ' : ''}${opts.bold ? 'bold ' : ''}${opts.size * S * sizeVar}px "${opts.font}", cursive`;
+              ctx.font = baseFont(opts.size * S * sizeV, charFont);
+              ctx.globalAlpha = alpha;
               ctx.fillStyle = opts.color;
               ctx.fillText(char, 0, 0);
+              ctx.globalAlpha = 1;
               ctx.restore();
-              ctx.font = fs;
-              cx += charW + (Math.random() - 0.5) * jitter * S * 0.18;
+
+              // Natural spacing: tiny random spread/cluster
+              cx += baseCharW + (Math.random() - 0.5) * jitter * S * 0.16;
             }
           } else {
+            ctx.font = baseFontStr;
+            ctx.fillStyle = opts.color;
             ctx.fillText(wl, startX, cy, maxW);
           }
+
           if (opts.underline) {
+            ctx.font = baseFontStr;
             ctx.strokeStyle = opts.color; ctx.lineWidth = 1;
-            ctx.beginPath(); ctx.moveTo(startX, cy + 2); ctx.lineTo(startX + ctx.measureText(wl).width, cy + 2); ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(startX, cy + 2);
+            ctx.lineTo(startX + ctx.measureText(wl).width, cy + 2);
+            ctx.stroke();
           }
           cy += step;
         }
@@ -366,24 +430,48 @@ export default function OpenSourceLabs({
         <button class="btn" style="background:#6b7280" onclick="window.close()">✕ Yopish</button>
       </div>
       <div class="paper">${marginLine}${content}</div>
+      <script>
+        // Wait for Google Fonts to fully load before printing.
+        // Using document.fonts.ready (not setTimeout) guarantees the font
+        // is actually rendered — setTimeout was unreliable on slow connections.
+        document.fonts.ready.then(function() {
+          requestAnimationFrame(function() {
+            requestAnimationFrame(function() {
+              window.print();
+            });
+          });
+        });
+      </script>
     </body></html>`);
     pw.document.close();
   };
 
-  const handleExportPdf = () => {
-    const canvas = renderCanvas();
-    const img = canvas.toDataURL('image/jpeg', 0.93);
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    pdf.addImage(img, 'JPEG', 0, 0, 210, 297);
-    pdf.save(`qolyozma_${Date.now()}.pdf`);
+  const handleExportPdf = async () => {
+    setExporting(true);
+    try {
+      await ensureFontsLoaded(font, fsize * 2);
+      const canvas = renderCanvas();
+      const img = canvas.toDataURL('image/jpeg', 0.95);
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      pdf.addImage(img, 'JPEG', 0, 0, 210, 297);
+      pdf.save(`qolyozma_${Date.now()}.pdf`);
+    } finally {
+      setExporting(false);
+    }
   };
 
-  const handleExportPng = () => {
-    const canvas = renderCanvas();
-    const link = document.createElement('a');
-    link.href = canvas.toDataURL('image/png');
-    link.download = `qolyozma_${Date.now()}.png`;
-    link.click();
+  const handleExportPng = async () => {
+    setExporting(true);
+    try {
+      await ensureFontsLoaded(font, fsize * 2);
+      const canvas = renderCanvas();
+      const link = document.createElement('a');
+      link.href = canvas.toDataURL('image/png');
+      link.download = `qolyozma_${Date.now()}.png`;
+      link.click();
+    } finally {
+      setExporting(false);
+    }
   };
 
   const handleExportDocx = async () => {
@@ -789,16 +877,16 @@ export default function OpenSourceLabs({
               {currentLang==='uz'?'Chop etish / Print':currentLang==='ru'?'Печать':'Print'}
             </button>
 
-            <button onClick={handleExportPdf}
-              className="w-full py-3 flex items-center justify-center gap-2 text-xs font-bold rounded-xl bg-rose-600 hover:bg-rose-500 text-white cursor-pointer transition shadow-lg shadow-rose-600/20">
-              <FileDown className="w-4 h-4" />
-              PDF
+            <button onClick={handleExportPdf} disabled={exporting}
+              className="w-full py-3 flex items-center justify-center gap-2 text-xs font-bold rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-60 disabled:cursor-wait text-white cursor-pointer transition shadow-lg shadow-rose-600/20">
+              <FileDown className={`w-4 h-4 ${exporting ? 'animate-pulse' : ''}`} />
+              {exporting ? (currentLang==='uz'?'Yuklanmoqda...':currentLang==='ru'?'Загрузка...':'Loading...') : 'PDF'}
             </button>
 
-            <button onClick={handleExportPng}
-              className="w-full py-3 flex items-center justify-center gap-2 text-xs font-bold rounded-xl bg-violet-600 hover:bg-violet-500 text-white cursor-pointer transition shadow-lg shadow-violet-600/20">
-              <Download className="w-4 h-4" />
-              PNG
+            <button onClick={handleExportPng} disabled={exporting}
+              className="w-full py-3 flex items-center justify-center gap-2 text-xs font-bold rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-60 disabled:cursor-wait text-white cursor-pointer transition shadow-lg shadow-violet-600/20">
+              <Download className={`w-4 h-4 ${exporting ? 'animate-pulse' : ''}`} />
+              {exporting ? (currentLang==='uz'?'Yuklanmoqda...':currentLang==='ru'?'Загрузка...':'Loading...') : 'PNG'}
             </button>
 
             <button onClick={handleExportDocx}
