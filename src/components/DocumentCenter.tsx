@@ -967,6 +967,7 @@ export default function DocumentCenter({ currentLang, theme = 'dark', onSendToHa
   const [globalError, setGlobalError] = useState('');
   const [successDownloadUrl, setSuccessDownloadUrl] = useState<string | null>(null);
   const [successFilename, setSuccessFilename] = useState('');
+  const [wordPdfPrintOpened, setWordPdfPrintOpened] = useState(false);
 
   // Interactive signature drawing states
   const [isDrawing, setIsDrawing] = useState(false);
@@ -1034,6 +1035,7 @@ export default function DocumentCenter({ currentLang, theme = 'dark', onSendToHa
     setSuccessFilename('');
     setGlobalError('');
     setIsProcessing(false);
+    setWordPdfPrintOpened(false);
   }, [activeTool]);
 
   // Handle uploading files for JPG to PDF
@@ -1775,27 +1777,126 @@ export default function DocumentCenter({ currentLang, theme = 'dark', onSendToHa
         } else if (activeTool === 'wordToPdf') {
           if (!pdfExtraFile) throw new Error("Microsoft Word fayli yuklanmagan.");
           const arrayBuffer = await pdfExtraFile.arrayBuffer();
-          try {
-            const res = await mammoth.extractRawText({ arrayBuffer: arrayBuffer });
-            const extracted = res.value || 'Word hujjatda hech qanday matn topilmadi.';
-            const doc = new jsPDF();
-            doc.setFont("Helvetica", "normal");
-            doc.setFontSize(10);
-            const splitText = doc.splitTextToSize(extracted, 180);
-            let yPos = 20;
-            splitText.forEach((line: string) => {
-              if (yPos > 280) {
-                doc.addPage();
-                yPos = 20;
-              }
-              doc.text(line, 15, yPos);
-              yPos += 6;
-            });
-            outputBytes = new Uint8Array(doc.output('arraybuffer'));
-            setSuccessFilename(`${origName}_word_dan.pdf`);
-          } catch (err) {
-            throw new Error("Word faylini o'qishda xatolik yuz berdi. Fayl parolsiz va buzilmagan ekanini tekshiring.");
-          }
+
+          // Use convertToHtml (NOT extractRawText) to preserve bold, italic,
+          // tables, headings, lists and all other Word formatting.
+          const result = await mammoth.convertToHtml({
+            arrayBuffer,
+            styleMap: [
+              "p[style-name='Heading 1'] => h1:fresh",
+              "p[style-name='Heading 2'] => h2:fresh",
+              "p[style-name='Heading 3'] => h3:fresh",
+              "p[style-name='Heading 4'] => h4:fresh",
+              "b => strong",
+              "i => em",
+              "u => u",
+            ],
+          });
+
+          const htmlContent = result.value || '<p>Hujjatda matn topilmadi.</p>';
+
+          // Open a properly styled print window — browser renders tables/fonts perfectly,
+          // then auto-triggers print so user saves via Ctrl+S / "Save as PDF".
+          const pw = window.open('', '_blank', 'width=900,height=700');
+          if (!pw) throw new Error("Popup ruxsatini yoqing (brauzer sozlamalar).");
+
+          pw.document.write(`<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>${pdfExtraFile.name.replace('.docx','')}</title>
+  <style>
+    @page { size: A4; margin: 20mm; }
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      font-family: 'Times New Roman', Times, serif;
+      font-size: 12pt;
+      line-height: 1.6;
+      color: #000;
+      background: #fff;
+      margin: 0;
+      padding: 0;
+    }
+    .toolbar {
+      position: sticky; top: 0; z-index: 100;
+      background: #1e40af; color: #fff;
+      padding: 10px 20px;
+      display: flex; align-items: center; justify-content: space-between;
+      font-family: sans-serif; font-size: 13px; font-weight: 600;
+      gap: 12px;
+    }
+    .toolbar button {
+      background: #fff; color: #1e40af;
+      border: none; padding: 7px 18px;
+      border-radius: 8px; cursor: pointer;
+      font-weight: 700; font-size: 12px;
+    }
+    .toolbar button:hover { background: #dbeafe; }
+    .doc { max-width: 794px; margin: 0 auto; padding: 32px 40px 60px; }
+    h1 { font-size: 18pt; font-weight: bold; margin: 16pt 0 8pt; }
+    h2 { font-size: 14pt; font-weight: bold; margin: 12pt 0 6pt; }
+    h3 { font-size: 12pt; font-weight: bold; margin: 10pt 0 4pt; }
+    h4 { font-size: 11pt; font-weight: bold; margin: 8pt 0 4pt; }
+    p  { margin: 0 0 8pt; }
+    strong, b { font-weight: bold; }
+    em, i     { font-style: italic; }
+    u         { text-decoration: underline; }
+    table {
+      border-collapse: collapse;
+      width: 100%; margin: 10pt 0;
+      page-break-inside: auto;
+    }
+    tr { page-break-inside: avoid; page-break-after: auto; }
+    td, th {
+      border: 1px solid #555;
+      padding: 5pt 8pt;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: #f0f0f0; font-weight: bold; }
+    ul, ol { margin: 8pt 0; padding-left: 22pt; }
+    li { margin: 2pt 0; }
+    img { max-width: 100%; height: auto; }
+    blockquote {
+      border-left: 3px solid #888;
+      padding-left: 12pt; margin: 8pt 0;
+      color: #333;
+    }
+    @media print {
+      .toolbar { display: none !important; }
+      body { padding: 0; }
+      .doc { padding: 0; max-width: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <span>📄 ${pdfExtraFile.name} — PDF sifatida saqlash</span>
+    <div style="display:flex;gap:8px">
+      <button onclick="window.print()">🖨️ PDF Saqlash (Ctrl+P)</button>
+      <button onclick="window.close()" style="background:#bfdbfe">✕ Yopish</button>
+    </div>
+  </div>
+  <div class="doc">${htmlContent}</div>
+  <script>
+    document.fonts.ready.then(function() {
+      requestAnimationFrame(function() {
+        requestAnimationFrame(function() {
+          window.print();
+        });
+      });
+    });
+  </script>
+</body>
+</html>`);
+          pw.document.close();
+
+          // wordToPdf handled via print window — no blob download needed.
+          // Return early to skip the normal outputBytes → blob → URL flow.
+          setWordPdfPrintOpened(true);
+          setGlobalError('');
+          return;
 
         } else if (activeTool === 'pdfToWord') {
           if (!pdfExtraFile) throw new Error("PDF fayli yuklanmagan.");
@@ -4244,7 +4345,26 @@ export default function DocumentCenter({ currentLang, theme = 'dark', onSendToHa
                     )}
                   </button>
 
-                  {successDownloadUrl && (
+                  {/* Word→PDF: opened in print window */}
+                  {wordPdfPrintOpened && activeTool === 'wordToPdf' && (
+                    <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-2xl space-y-2 animate-fade-in font-sans mt-4">
+                      <div className="flex items-center gap-2.5">
+                        <CheckCircle2 className="w-5 h-5 text-blue-500 shrink-0" />
+                        <div>
+                          <h4 className="text-sm font-bold text-blue-600 dark:text-blue-400">Hujjat print oynasida ochildi!</h4>
+                          <p className="text-[11px] text-slate-500 mt-0.5">
+                            Barcha formatlash (jadval, qalin, kursiv, sarlavhalar) saqlanган.
+                          </p>
+                        </div>
+                      </div>
+                      <div className={`text-[11px] font-semibold px-3 py-2 rounded-xl ${theme === 'dark' ? 'bg-slate-900 text-slate-300' : 'bg-slate-100 text-slate-700'}`}>
+                        💡 Print oynasida <strong>Ctrl+P</strong> bosing → "PDF sifatida saqlash" ni tanlang
+                      </div>
+                    </div>
+                  )}
+
+                  {/* All other tools: standard download link */}
+                  {successDownloadUrl && activeTool !== 'wordToPdf' && (
                     <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex flex-col items-center gap-3 animate-fade-in font-sans mt-4 text-left">
                       <div className="flex items-center gap-2.5">
                         <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
