@@ -13,13 +13,14 @@ import {
   PenTool, UploadCloud, X, AlertCircle, Check,
   FileDown, Printer, Download, RefreshCw, Layers,
   Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight,
-  ZoomIn, ZoomOut, Trash2, Plus
+  ZoomIn, ZoomOut, Trash2, Plus, UserCheck
 } from 'lucide-react';
+import PersonalHandwriting, { PERSONAL_FONT_KEY, loadPersonalFont } from './PersonalHandwriting';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type PaperType = 'ruled' | 'grid' | 'blank' | 'yellow';
-type HWFont = 'Caveat' | 'Kalam' | 'Patrick Hand' | 'Indie Flower' | 'Marck Script' | 'Bad Script' | 'Reenie Beanie' | 'Schoolbell';
+type HWFont = 'Caveat' | 'Kalam' | 'Patrick Hand' | 'Indie Flower' | 'Marck Script' | 'Bad Script' | 'Reenie Beanie' | 'Schoolbell' | typeof PERSONAL_FONT_KEY;
 
 interface TextBlock {
   id: string;
@@ -152,6 +153,9 @@ export default function OpenSourceLabs({
   const [zoom,  setZoom]      = useState(0.85);
   const [jitter, setJitter]   = useState(3);
   const [exporting, setExporting] = useState(false);
+  const [showPersonalCapture, setShowPersonalCapture] = useState(false);
+  const [personalFontData, setPersonalFontData]       = useState<Record<string, string>>(() => loadPersonalFont());
+  const personalFontCount = Object.keys(personalFontData).length;
 
   // Toolbar state (per-block or global for textarea mode)
   const [bold,    setBold]    = useState(false);
@@ -357,15 +361,92 @@ export default function OpenSourceLabs({
       }
     };
 
+    // Personal font rendering: draw saved images per character
+    // Falls back to Caveat for any missing character.
+    const drawPersonalText = (t: string, startX: number, startY: number, maxW: number, opts: { size: number; color: string; bold: boolean; italic: boolean }) => {
+      const pf = loadPersonalFont();
+      const fallbackFs = `${opts.italic?'italic ':''}${opts.bold?'bold ':''}${opts.size * S}px "Caveat", cursive`;
+      const step = lh * S;
+      const lines = t.split('\n');
+      let cy = startY;
+
+      for (const line of lines) {
+        if (cy > canvas.height - 20) break;
+        ctx.font = fallbackFs;
+        const words = line.split(' ');
+        let cur = '';
+        const wrapped: string[] = [];
+        for (const w of words) {
+          const test = cur + (cur ? ' ' : '') + w;
+          if (ctx.measureText(test).width > maxW && cur) { wrapped.push(cur); cur = w; }
+          else cur = test;
+        }
+        if (cur) wrapped.push(cur);
+
+        for (const wl of wrapped) {
+          if (cy > canvas.height - 20) break;
+          let cx = startX;
+
+          for (const char of wl) {
+            const charKey = pf[char] ? char : (pf[char.toLowerCase()] ? char.toLowerCase() : null);
+            ctx.font = fallbackFs;
+            const baseW = ctx.measureText(char).width;
+
+            if (charKey && pf[charKey]) {
+              const img = new window.Image();
+              img.src = pf[charKey];
+              const targetH = opts.size * S * 1.1;
+              const targetW = targetH * (160 / 120); // CAP_W/CAP_H ratio
+              const jx = jitter > 0 ? (Math.random() - 0.5) * jitter * S * 0.6 : 0;
+              const jy = jitter > 0 ? (Math.random() - 0.5) * jitter * S * 0.4 : 0;
+              const angle = jitter > 0 ? (Math.random() - 0.5) * jitter * 0.005 : 0;
+              ctx.save();
+              ctx.translate(cx + jx, cy - targetH * 0.85 + jy);
+              ctx.rotate(angle);
+              ctx.globalAlpha = 0.82 + Math.random() * 0.18;
+              ctx.drawImage(img, 0, 0, targetW, targetH);
+              ctx.globalAlpha = 1;
+              ctx.restore();
+              cx += targetW * 0.6 + (Math.random() - 0.5) * jitter * S * 0.12;
+            } else {
+              // Fallback to Caveat for missing characters
+              const jx = jitter > 0 ? (Math.random() - 0.5) * jitter * S * 0.7 : 0;
+              const jy = jitter > 0 ? (Math.random() - 0.5) * jitter * S * 0.5 : 0;
+              ctx.save();
+              ctx.translate(cx + jx, cy + jy);
+              ctx.font = fallbackFs;
+              ctx.fillStyle = opts.color;
+              ctx.globalAlpha = 0.85 + Math.random() * 0.15;
+              ctx.fillText(char, 0, 0);
+              ctx.globalAlpha = 1;
+              ctx.restore();
+              cx += baseW;
+            }
+          }
+          cy += step;
+        }
+      }
+    };
+
+    const isPersonal = font === PERSONAL_FONT_KEY;
+
     if (mode === 'simple') {
+      if (isPersonal) {
+        drawPersonalText(text, ML * S, (MT + lh) * S, (PW - ML - 30) * S, { size: fsize, color, bold, italic });
+      } else {
       drawText(text, ML * S, (MT + lh) * S, (PW - ML - 30) * S, {
         font, size: fsize, color, bold, italic, underline: uline,
       });
+      } // end !isPersonal
     } else {
       for (const b of [...blocks].sort((a, z) => a.y - z.y)) {
-        drawText(b.text, b.x * S, b.y * S, b.w * S, {
-          font: b.font, size: b.fontSize, color: b.color, bold: b.bold, italic: b.italic, underline: b.underline,
-        });
+        if (b.font === PERSONAL_FONT_KEY) {
+          drawPersonalText(b.text, b.x * S, b.y * S, b.w * S, { size: b.fontSize, color: b.color, bold: b.bold, italic: b.italic });
+        } else {
+          drawText(b.text, b.x * S, b.y * S, b.w * S, {
+            font: b.font, size: b.fontSize, color: b.color, bold: b.bold, italic: b.italic, underline: b.underline,
+          });
+        }
       }
     }
 
@@ -555,6 +636,22 @@ export default function OpenSourceLabs({
       onMouseMove={handleDocMouseMove}
       onMouseUp={handleDocMouseUp}
     >
+      {/* ── Personal handwriting capture modal ── */}
+      {showPersonalCapture && (
+        <PersonalHandwriting
+          theme={theme}
+          currentLang={currentLang}
+          onClose={() => {
+            setShowPersonalCapture(false);
+            const refreshed = loadPersonalFont();
+            setPersonalFontData(refreshed);
+            if (Object.keys(refreshed).length >= 5) {
+              setFont(PERSONAL_FONT_KEY);
+            }
+          }}
+        />
+      )}
+
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
@@ -642,6 +739,46 @@ export default function OpenSourceLabs({
               <label className={lbl}>
                 {currentLang==='uz' ? 'Shrift' : currentLang==='ru' ? 'Шрифт' : 'Font'}
               </label>
+
+              {/* Personal handwriting option — top of list */}
+              <div className="mb-2">
+                <button
+                  onClick={() => {
+                    if (personalFontCount < 5) {
+                      setShowPersonalCapture(true);
+                    } else {
+                      setFont(PERSONAL_FONT_KEY);
+                      applyToActive({ font: PERSONAL_FONT_KEY });
+                    }
+                  }}
+                  className={`w-full py-2.5 px-3 text-[11px] font-bold border rounded-xl cursor-pointer transition flex items-center justify-between gap-2 ${
+                    font === PERSONAL_FONT_KEY
+                      ? 'bg-amber-500 text-white border-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.3)]'
+                      : dk
+                      ? 'border-amber-500/30 text-amber-400 bg-amber-500/5 hover:bg-amber-500/10'
+                      : 'border-amber-200 text-amber-600 bg-amber-50 hover:bg-amber-100'
+                  }`}
+                >
+                  <span className="flex items-center gap-1.5">
+                    <UserCheck className="w-3.5 h-3.5" />
+                    {currentLang==='uz' ? "Mening Qo'lyozmam" : currentLang==='ru' ? 'Мой Почерк' : 'My Handwriting'}
+                  </span>
+                  <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-md ${
+                    font === PERSONAL_FONT_KEY ? 'bg-white/20 text-white' : 'bg-amber-500/15 text-amber-500'
+                  }`}>
+                    {personalFontCount > 0 ? `${personalFontCount} harf` : currentLang==='uz'?'Yangi':'New'}
+                  </span>
+                </button>
+                {personalFontCount > 0 && font !== PERSONAL_FONT_KEY && (
+                  <button
+                    onClick={() => setShowPersonalCapture(true)}
+                    className={`w-full mt-1 py-1 text-[10px] font-semibold text-center cursor-pointer transition rounded-lg ${dk ? 'text-slate-500 hover:text-amber-400' : 'text-slate-400 hover:text-amber-500'}`}
+                  >
+                    {currentLang==='uz' ? '+ Ko\'proq harf qo\'shish' : 'Edit characters'}
+                  </button>
+                )}
+              </div>
+
               <div className="grid grid-cols-2 gap-1.5">
                 {FONTS.map(f => (
                   <button key={f.id} onClick={() => { setFont(f.id); applyToActive({ font: f.id }); }}

@@ -15,7 +15,8 @@ import OpenSourceLabs from './components/OpenSourceLabs';
 import {
   FileText, Type, Sun, Moon, Shield, ArrowRight,
   Sparkles, PenTool, Lock, BarChart3, ChevronRight,
-  Globe2, Check, Zap, Clock, Trash2, FileDown, Layers
+  Globe2, Check, Zap, Clock, Trash2, FileDown, Layers,
+  Download, WifiOff, X
 } from 'lucide-react';
 
 type Tab = 'home' | 'lang' | 'docs' | 'ai' | 'prices' | 'opensource';
@@ -50,6 +51,56 @@ export default function App() {
     try { return JSON.parse(localStorage.getItem('hz_history') || '[]'); } catch { return []; }
   });
   const [devPanel, setDevPanel] = useState(false);
+
+  // PWA install prompt
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
+  const [showInstallBanner, setShowInstallBanner] = useState(false);
+  const [isInstalled, setIsInstalled] = useState(false);
+
+  // Online/offline detection
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const online  = () => setIsOnline(true);
+    const offline = () => setIsOnline(false);
+    window.addEventListener('online',  online);
+    window.addEventListener('offline', offline);
+    return () => { window.removeEventListener('online', online); window.removeEventListener('offline', offline); };
+  }, []);
+
+  useEffect(() => {
+    // Capture the browser's install prompt event
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+      const dismissed = localStorage.getItem('hz_install_dismissed');
+      if (!dismissed) setShowInstallBanner(true);
+    };
+    window.addEventListener('beforeinstallprompt', handler as EventListener);
+
+    // Detect if already installed as PWA
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      setIsInstalled(true);
+    }
+
+    return () => window.removeEventListener('beforeinstallprompt', handler as EventListener);
+  }, []);
+
+  const handleInstall = async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    const result = await installPrompt.userChoice;
+    if (result.outcome === 'accepted') {
+      setIsInstalled(true);
+      setShowInstallBanner(false);
+    }
+    setInstallPrompt(null);
+  };
+
+  const dismissInstall = () => {
+    setShowInstallBanner(false);
+    localStorage.setItem('hz_install_dismissed', '1');
+  };
 
   useEffect(() => { localStorage.setItem('dimu_pro_lang', currentLang); }, [currentLang]);
   useEffect(() => { localStorage.setItem('dimu_pro_theme', theme); }, [theme]);
@@ -162,6 +213,44 @@ export default function App() {
   return (
     <div className={`min-h-screen flex flex-col selection:bg-blue-500/20 ${rootBg}`}>
 
+      {/* ── Offline banner ── */}
+      {!isOnline && (
+        <div className="sticky top-0 z-[60] flex items-center justify-center gap-2 py-2 px-4 bg-amber-500/15 border-b border-amber-500/25 text-amber-400 text-xs font-semibold">
+          <WifiOff className="w-3.5 h-3.5" />
+          {currentLang === 'uz'
+            ? "Offline rejim — Transliteratsiya va PDF asboblar ishlaydi. AI xizmatlari vaqtincha mavjud emas."
+            : currentLang === 'ru'
+            ? "Офлайн режим — Транслитерация и PDF работают. AI сервисы временно недоступны."
+            : "Offline mode — Transliteration and PDF tools work. AI services unavailable."}
+        </div>
+      )}
+
+      {/* ── PWA install banner (bottom) ── */}
+      {showInstallBanner && !isInstalled && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl border shadow-2xl max-w-sm w-[calc(100%-2rem)] animate-slide-up bg-[#0d1117] border-blue-500/30">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center shrink-0">
+            <FileText className="w-4 h-4 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-bold text-white">
+              {currentLang === 'uz' ? 'Hujjat.uz ni yuklab oling' : currentLang === 'ru' ? 'Установить Hujjat.uz' : 'Install Hujjat.uz'}
+            </p>
+            <p className="text-[10px] text-slate-500">
+              {currentLang === 'uz' ? 'Ilova kabi ishlatish uchun' : currentLang === 'ru' ? 'Работать как приложение' : 'Use like a native app'}
+            </p>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button onClick={handleInstall}
+              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg cursor-pointer transition">
+              {currentLang === 'uz' ? 'Yuklab olish' : currentLang === 'ru' ? 'Установить' : 'Install'}
+            </button>
+            <button onClick={dismissInstall} className="p-1.5 text-slate-500 hover:text-slate-300 cursor-pointer">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ══════════════════════════════════════════
           HEADER — Ultra minimal, blur backdrop
       ══════════════════════════════════════════ */}
@@ -218,6 +307,28 @@ export default function App() {
 
           {/* Controls */}
           <div className="flex items-center gap-1.5 shrink-0">
+            {/* PWA Install button */}
+            {installPrompt && !isInstalled && (
+              <button
+                onClick={handleInstall}
+                className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[10px] font-bold cursor-pointer transition-all ${
+                  dk
+                    ? 'border-blue-500/30 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20'
+                    : 'border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100'
+                }`}
+                title="Ilovani yuklab olish"
+              >
+                <Download className="w-3 h-3" />
+                {currentLang === 'uz' ? 'Yuklab olish' : currentLang === 'ru' ? 'Установить' : 'Install'}
+              </button>
+            )}
+            {/* Offline indicator */}
+            {!isOnline && (
+              <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-500/15 text-amber-400 border border-amber-500/25 text-[10px] font-bold">
+                <WifiOff className="w-3 h-3" />
+                <span className="hidden sm:inline">Offline</span>
+              </div>
+            )}
             <div className={`hidden sm:flex items-center gap-0.5 p-0.5 rounded-lg border ${
               dk ? 'border-[#21262d] bg-[#0d1117]' : 'border-slate-200 bg-white'
             }`}>

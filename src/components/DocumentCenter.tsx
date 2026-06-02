@@ -93,6 +93,48 @@ export default function DocumentCenter({ currentLang, theme = 'dark', onSendToHa
           from: 'Fuqaro Usmonova Laylo',
           detail: 'Fuqaro Usmonova Layloning ushbu tashkilotda 2024-yildan beri bosh hisobchi yordamchisi lavozimida haqiqatdan ham ishlab kelayotganligi va oylik o\'rtacha maoshi 4,500,000 so\'m ekanligi haqida ma\'lumotnoma'
         };
+      case 'ishdan_boshatish':
+        return {
+          to: '"Texno Grupp" MCHJ Direktori B.A. Hasanovga',
+          from: '"Bosh dasturchi" lavozimidagi Yusupov Doniyor',
+          detail: 'shaxsiy sabablarga ko\'ra 2026-yil 20-iyundan boshlab ishdan bo\'shatishingizni so\'rayman'
+        };
+      case 'ishga_qabul':
+        return {
+          to: '"IT Solutions" MCHJ kadrlar bo\'limi boshlig\'iga',
+          from: 'Fuqaro Mirzayev Jasur Alimovich',
+          detail: '"Frontend dasturchi" lavozimiga ishga qabul qilishingizni so\'rayman. Malaka: React, TypeScript, 3 yil tajriba.'
+        };
+      case 'ijara':
+        return {
+          to: 'Uy egasi: Toshmatov Bobur Salimovich (Pasport AB 1234567)',
+          from: 'Ijorachi: Rahimov Sardor Komilovich (Pasport AC 7654321)',
+          detail: 'Toshkent sh., Yunusobod tumani, Amir Temur ko\'chasi 45-uy, 3-qavatdagi 2 xonali kvartira oylik 1,500,000 so\'m evaziga 1 yil muddatga ijaraga olinmoqda.'
+        };
+      case 'qarz':
+        return {
+          to: 'Qarz beruvchi: Karimov Alisher Umarovich',
+          from: 'Qarz oluvchi: Sodiqov Firdavs Behzodovich',
+          detail: '5,000,000 (besh million) so\'m miqdoridagi pul 2026-yil 1-iyundan boshlab 6 oy muddatga qarzga olinmoqda. To\'lash muddati: 2026-yil 1-dekabr.'
+        };
+      case 'soliq_ariza':
+        return {
+          to: 'Toshkent shahar Soliq inspeksiyasi boshlig\'iga',
+          from: 'Fuqaro Umarov Sanjar, JSHSHIR: 12345678901234',
+          detail: '2025-yil uchun daromad solig\'i bo\'yicha ortiqcha to\'langan 450,000 so\'m summasini qaytarib berishingizni so\'rayman. Asos: soliq deklaratsiyasi №2025-1234.'
+        };
+      case 'ta_lim_ariza':
+        return {
+          to: 'Toshkent Davlat Texnika Universiteti rektori prof. A.A. Tillayevga',
+          from: '"Kompyuter muhandisligi" yo\'nalishi 2-kurs talabasi Holiqov Timur, guruh KM-22',
+          detail: 'kasallik sababli 2026-yil 5-10 iyun kunlari sessiya imtihonlarini kechiktirish haqida akademik ta\'til berishingizni yoki muddatini uzaytirishingizni so\'rayman.'
+        };
+      case 'mehnat_shikoyat':
+        return {
+          to: 'Mehnat va aholini ijtimoiy muhofaza qilish vazirligiga',
+          from: 'Fuqaro Normatov Eldor, manzil: Toshkent sh., Chilonzor tumani',
+          detail: '"Alfa Logistika" MCHJ direktori tomonidan oylik maoshi 3 oy to\'lanmayotganligi va mehnat shartnomasini asossiz ravishda bekor qilishga harakat qilganligi sababli shikoyat bildirmoqchiman.'
+        };
       case 'free':
       default:
         return {
@@ -312,6 +354,211 @@ export default function DocumentCenter({ currentLang, theme = 'dark', onSendToHa
           '',
           `    Ushbu murojaatni ko'rib chiqib, tegishli qaror qabul qilishingizni`,
           `    iltimoslar bilan so'rayman.`,
+          '',
+          '',
+          `    ${dateStr}                                    Imzo: ____________________`,
+          `                                                  ${cleanFrom}`,
+        ].join('\n');
+      }
+
+      case 'ishdan_boshatish': {
+        const body = cleanDetail.replace(/\.?\s*so['']rayman\.?\s*$/i, '').trim();
+        return [
+          '',
+          pad(cleanTo, 70),
+          pad('', 70),
+          pad(cleanFrom + ' dan', 70),
+          '',
+          '',
+          '                                       A R I Z A',
+          '                               (Ishdan bo\'shatish to\'g\'risida)',
+          '',
+          '',
+          `    Hurmatli rahbar,`,
+          '',
+          `    Sizdan ${body.charAt(0).toLowerCase() + body.slice(1)}ni so'rayman.`,
+          '',
+          `    Mehnat kodeksining 100-moddasi asosida ish beruvchi bilan`,
+          `    kelishilgan holda shartnomani tugatishni so'rayman.`,
+          '',
+          '',
+          `    ${dateStr}                                    Imzo: ____________________`,
+          `                                                  ${cleanFrom}`,
+        ].join('\n');
+      }
+
+      case 'ishga_qabul': {
+        return [
+          '',
+          pad(cleanTo, 70),
+          pad('', 70),
+          pad(cleanFrom + ' dan', 70),
+          '',
+          '',
+          '                           I S H G A   Q A B U L   Q I L I S H',
+          '                                  T O \'G \'R I S I D A',
+          '                                     A R I Z A',
+          '',
+          '',
+          `    Hurmatli kadrlar bo'limi rahbari,`,
+          '',
+          `    ${cleanDetail}.`,
+          '',
+          `    Zaruriy hujjatlar (diplom, pasport nusxasi, mehnat daftarchasi)`,
+          `    ariza bilan birga topshirilmoqda.`,
+          '',
+          `    Menga ishonchingizni bildirgan holda ishga qabul qilishingizni`,
+          `    so'rayman.`,
+          '',
+          '',
+          `    ${dateStr}                                    Imzo: ____________________`,
+          `                                                  ${cleanFrom}`,
+        ].join('\n');
+      }
+
+      case 'ijara': {
+        const yr2 = new Date().getFullYear();
+        return [
+          `    Toshkent shahri                                         ${dateStr}`,
+          '',
+          '',
+          '                               I J A R A   S H A R T N O M A S I',
+          `                                    № _____ / ${yr2}`,
+          '',
+          '',
+          `    Biz, bir tomondan — ${cleanTo} ("Uy egasi"),`,
+          `    va ikkinchi tomondan — ${cleanFrom} ("Ijorachi"),`,
+          `    quyidagi shartlar asosida ushbu ijara shartnomasini tuzdik:`,
+          '',
+          '',
+          `    1. SHARTNOMA PREDMETI`,
+          `    1.1. ${cleanDetail}.`,
+          '',
+          `    2. IJARA MUDDATI VA TO'LOV TARTIBI`,
+          `    2.1. Ijara shartnomasi imzolangan kundan kuchga kiradi.`,
+          `    2.2. Ijara haqi har oyning 5-kunigacha naqd pul yoki bank o'tkazma`,
+          `         orqali to'lanadi.`,
+          '',
+          `    3. TOMONLARNING MAJBURIYATLARI`,
+          `    3.1. Uy egasi: mulkni yaxshi holatda topshirish, kommunal xizmatlarni`,
+          `         ta'minlash majburiyatini oladi.`,
+          `    3.2. Ijorachi: mulkni ehtiyotkorlik bilan ishlatish, vaqtida to'lash`,
+          `         majburiyatini oladi.`,
+          '',
+          '',
+          `    UY EGASI:                                 IJORACHI:`,
+          `    ____________________________              ____________________________`,
+          `    (imzo)  F.I.O.                            (imzo)  F.I.O.`,
+          `    Sana: ________________                    Sana: ________________`,
+        ].join('\n');
+      }
+
+      case 'qarz': {
+        return [
+          `    Toshkent shahri                                         ${dateStr}`,
+          '',
+          '',
+          '                              Q A R Z   T I L X A T I',
+          '',
+          '',
+          `    Men, ${cleanFrom},`,
+          '',
+          `    ${cleanTo} dan quyidagi shartlarda pul qarz oldim:`,
+          '',
+          `    ${cleanDetail}.`,
+          '',
+          `    Men, qarz oluvchi, mazkur summani belgilangan muddatda`,
+          `    to'liq qaytarishni va qarz shartnomasi shartlariga`,
+          `    rioya qilishni o'z zimmasiga olaman.`,
+          '',
+          `    Agar belgilangan muddatda to'lanmasa, qarz oluvchi`,
+          `    har bir kechiktirilgan kun uchun 0.1% jarima to'laydi.`,
+          '',
+          '',
+          `    Qarz beruvchi:                            Qarz oluvchi:`,
+          `    ____________________________              ____________________________`,
+          `    (imzo)  F.I.O.                            (imzo)  F.I.O.`,
+          `    Sana: ________________                    Sana: ________________`,
+        ].join('\n');
+      }
+
+      case 'soliq_ariza': {
+        return [
+          '',
+          pad(cleanTo, 70),
+          pad('', 70),
+          pad(cleanFrom + ' dan', 70),
+          '',
+          '',
+          '                            S O L I Q   A R I Z A S I',
+          '',
+          '',
+          `    Hurmatli inspeksiya rahbari,`,
+          '',
+          `    ${cleanDetail}.`,
+          '',
+          `    Ilova: 1. Daromad solig\'i deklaratsiyasi (1 varaq).`,
+          `           2. Bank to'lov hujjati (1 varaq).`,
+          `           3. Pasport nusxasi (1 varaq).`,
+          '',
+          `    Arizamni ko'rib chiqib, qonun hujjatlari asosida hal`,
+          `    etishingizni so'rayman.`,
+          '',
+          '',
+          `    ${dateStr}                                    Imzo: ____________________`,
+          `                                                  ${cleanFrom}`,
+        ].join('\n');
+      }
+
+      case 'ta_lim_ariza': {
+        return [
+          '',
+          pad(cleanTo, 70),
+          pad('', 70),
+          pad(cleanFrom + ' dan', 70),
+          '',
+          '',
+          '                              T A ' + '\'L I M   A R I Z A S I',
+          '',
+          '',
+          `    Hurmatli rektor,`,
+          '',
+          `    ${cleanDetail}.`,
+          '',
+          `    Ilova: tibbiy ma'lumotnoma (agar mavjud bo'lsa).`,
+          '',
+          `    Ushbu arizamni ko'rib chiqib, ijobiy qaror qabul`,
+          `    qilishingizni so'rayman.`,
+          '',
+          '',
+          `    ${dateStr}                                    Imzo: ____________________`,
+          `                                                  ${cleanFrom}`,
+        ].join('\n');
+      }
+
+      case 'mehnat_shikoyat': {
+        return [
+          '',
+          pad(cleanTo, 70),
+          pad('', 70),
+          pad(cleanFrom + ' dan', 70),
+          '',
+          '',
+          '                            S H I K O Y A T   A R I Z A S I',
+          '',
+          '',
+          `    Hurmatli vazirlik rahbari,`,
+          '',
+          `    ${cleanDetail}.`,
+          '',
+          `    Mehnat kodeksining 9, 14, 17-moddalari asosida ish beruvchiga`,
+          `    nisbatan tegishli choralar ko'rishingizni, men esa qonuniy`,
+          `    huquqlarimni tiklashingizni so'rayman.`,
+          '',
+          `    Ilova:`,
+          `           1. Mehnat shartnomasi nusxasi.`,
+          `           2. Oylik maosh hisobi (uch oylik).`,
+          `           3. Guvohlar izohlari (2 varaq).`,
           '',
           '',
           `    ${dateStr}                                    Imzo: ____________________`,
@@ -2069,13 +2316,20 @@ export default function DocumentCenter({ currentLang, theme = 'dark', onSendToHa
               
               <div className="grid grid-cols-1 xs:grid-cols-2 gap-2.5">
                 {[
-                  { id: 'ariza', label: '✍️ Ariza (Mehnat/Ta\'til)' },
-                  { id: 'tushuntirish', label: '📋 Tushuntirish xati' },
-                  { id: 'tavsifnoma', label: '🎓 Tavsifnoma (Taqdim etish)' },
-                  { id: 'shartnoma', label: '🤝 Oldi-sotdi shartnomasi' },
-                  { id: 'bildirgi', label: '📢 Bildirishnoma (Bildirgi)' },
-                  { id: 'malumotnoma', label: 'ℹ️ Ma\'lumotnoma' },
-                  { id: 'free', label: '✨ Erkin Hujjat yozish' },
+                  { id: 'ariza',            label: '✍️ Ariza (Mehnat/Ta\'til)',    group: 'ish' },
+                  { id: 'ishdan_boshatish', label: '🚪 Ishdan bo\'shatish arizasi', group: 'ish' },
+                  { id: 'ishga_qabul',      label: '💼 Ishga qabul arizasi',        group: 'ish' },
+                  { id: 'tushuntirish',     label: '📋 Tushuntirish xati',          group: 'ish' },
+                  { id: 'tavsifnoma',       label: '🎓 Tavsifnoma',                 group: 'ish' },
+                  { id: 'mehnat_shikoyat',  label: '⚖️ Mehnat shikoyati',           group: 'ish' },
+                  { id: 'shartnoma',        label: '🤝 Oldi-sotdi shartnomasi',     group: 'huquq' },
+                  { id: 'ijara',            label: '🏠 Ijara shartnomasi',          group: 'huquq' },
+                  { id: 'qarz',             label: '💰 Qarz tilxati',              group: 'huquq' },
+                  { id: 'bildirgi',         label: '📢 Bildirishnoma',             group: 'rasmiy' },
+                  { id: 'malumotnoma',      label: 'ℹ️ Ma\'lumotnoma',            group: 'rasmiy' },
+                  { id: 'soliq_ariza',      label: '🏛️ Soliq inspeksiyasiga',     group: 'rasmiy' },
+                  { id: 'ta_lim_ariza',     label: '📚 Ta\'lim muassasasiga',      group: 'rasmiy' },
+                  { id: 'free',             label: '✨ Erkin yozish',              group: 'boshqa' },
                 ].map((tpl) => (
                   <button
                     key={tpl.id}

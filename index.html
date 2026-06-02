@@ -42,7 +42,7 @@
          PWA / INSTALLABILITY
     ═══════════════════════════════════════════════════════════ -->
     <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#4f46e5" />
+    <meta name="theme-color" content="#3b82f6" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Hujjat.uz" />
@@ -140,5 +140,27 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Register service worker for PWA offline support
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js', { scope: '/' })
+            .then(reg => {
+              reg.addEventListener('updatefound', () => {
+                const w = reg.installing;
+                if (w) {
+                  w.addEventListener('statechange', () => {
+                    if (w.state === 'installed' && navigator.serviceWorker.controller) {
+                      // New version available — could show update toast here
+                      console.log('[SW] Update available');
+                    }
+                  });
+                }
+              });
+            })
+            .catch(e => console.warn('[SW] Registration failed:', e));
+        });
+      }
+    </script>
   </body>
 </html>
