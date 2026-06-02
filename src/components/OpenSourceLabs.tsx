@@ -721,10 +721,10 @@ export default function OpenSourceLabs({
               </label>
               <div className="grid grid-cols-2 gap-1.5">
                 {([
-                  ['ruled',  currentLang==='uz'?'Chiziqli':'Линейка'],
-                  ['grid',   currentLang==='uz'?'Katak':'Клетка'],
-                  ['blank',  currentLang==='uz'?"Bo'sh":'Чистый'],
-                  ['yellow', currentLang==='uz'?'Sariq':'Жёлтый'],
+                  ['ruled',  currentLang==='uz'?'Chiziqli':currentLang==='ru'?'Линейка':'Ruled'],
+                  ['grid',   currentLang==='uz'?'Katak':currentLang==='ru'?'Клетка':'Grid'],
+                  ['blank',  currentLang==='uz'?"Bo'sh":currentLang==='ru'?'Чистый':'Blank'],
+                  ['yellow', currentLang==='uz'?'Sariq':currentLang==='ru'?'Жёлтый':'Yellow'],
                 ] as [PaperType, string][]).map(([id, lbl2]) => (
                   <button key={id} onClick={() => setPaper(id)}
                     className={`py-1.5 text-xs font-semibold border rounded-xl cursor-pointer transition ${paper===id?'bg-indigo-600 text-white border-indigo-600':dk?'border-slate-800 text-slate-400 hover:border-slate-600 hover:text-white bg-slate-900/30':'border-slate-200 text-slate-600 hover:bg-slate-100'}`}>
