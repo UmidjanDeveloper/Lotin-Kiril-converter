@@ -1,55 +1,70 @@
-import { GoogleGenAI } from "@google/genai";
-
-const apiKey = process.env.GEMINI_API_KEY || "";
-const ai = new GoogleGenAI({
-  apiKey: apiKey,
-  httpOptions: {
-    headers: {
-      'User-Agent': 'aistudio-build',
-    }
-  }
-});
+import { handlePreflight, checkApiKey, createClient, extractText, classifyError, GEMINI_MODEL } from "./_lib";
 
 export default async function handler(req: any, res: any) {
-  // Support CORS
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
-  );
+  if (handlePreflight(req, res)) return;
 
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Faqat POST so'rovlari qabul qilinadi." });
   }
 
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: "Method not allowed. Use POST." });
+  const keyError = checkApiKey(req);
+  if (keyError) {
+    return res.status(503).json({ error: keyError, code: "NO_API_KEY" });
   }
 
   try {
-    const { text, lang } = req.body || {};
-    if (!text || !text.trim()) {
-      return res.status(400).json({ error: "Matn kiritilmadi" });
+    const { text, lang } = req.body ?? {};
+
+    if (!text?.trim()) {
+      return res.status(400).json({ error: "Konspektlanadigan matn kiritilmadi." });
+    }
+    if (text.trim().length > 20000) {
+      return res.status(400).json({ error: "Matn juda uzun (maksimal 20 000 belgi)." });
     }
 
-    const prompt = `System instruction: Siz professional o'zbek va rus tillari tahlilchisi hamda hujjatchisiz. Berilgan o'zbekcha, ruscha yoki inglizcha matnni juda professional tilda batafsil tahlil qiling va uning muhim mazmunini konspektlashtirib bering. Konspekt muloqot tiliga mos ravishda tayyorlansin.
-Muloqot tili / Qaytarilishi kerak bo'lgan til shablonlari: ${lang || 'uz'}.
+    const langLabel =
+      lang === "ru" ? "Rus tili" : lang === "en" ? "Ingliz tili" : "O'zbek tili (lotin)";
+
+    const prompt = `Siz professional hujjat tahlilchisi va konspektlovchisiz.
+
+Vazifa: Quyidagi matnni professional tarzda konspektlang.
+Javob tili: ${langLabel}
+
+Konspekt strukturasi:
+1. **Asosiy g'oya** — 1-2 jumla (matnning mohiyati)
+2. **Muhim nuqtalar** — 3-7 ta qisqa band (bullet) shaklida
+3. **Xulosa** — 1-2 jumla (yakuniy fikr yoki tavsiya)
+
+Qoidalar:
+• Markdown formatlash ishlatilsin (**, •, 1. 2. 3.)
+• Faqat matn asosida — o'z fikringizni qo'shmang
+• Muhim raqamlar, sanalar, ismlar saqlansin
+
 Matn:
-${text}`;
+---
+${text.trim()}
+---`;
+
+    const ai = createClient(req);
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
+      model: GEMINI_MODEL,
       contents: prompt,
+      config: {
+        maxOutputTokens: 2048,
+        temperature: 0.3,
+      },
     });
 
-    return res.status(200).json({ output: response.text });
-  } catch (error: any) {
-    console.error("Summarize Vercel Error:", error);
-    return res.status(500).json({ 
-      error: "Konspektlash xizmati vaqtincha band, iltimos birozdan keyin qayta urinib ko'ring." 
-    });
+    const output = extractText(response);
+    if (!output) {
+      return res.status(502).json({ error: "AI bo'sh javob qaytardi." });
+    }
+
+    return res.status(200).json({ output });
+  } catch (err: any) {
+    console.error("[summarize] Gemini error:", err?.message ?? err);
+    const { status, message } = classifyError(err);
+    return res.status(status === 429 || status === 403 ? status : 500).json({ error: message });
   }
 }

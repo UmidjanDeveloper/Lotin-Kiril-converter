@@ -1,76 +1,70 @@
-import { GoogleGenAI } from "@google/genai";
+import { handlePreflight, checkApiKey, createClient, extractText, classifyError, GEMINI_MODEL } from "./_lib";
 
-const apiKey = process.env.GEMINI_API_KEY || "";
-const ai = new GoogleGenAI({
-  apiKey: apiKey,
-  httpOptions: {
-    headers: {
-      'User-Agent': 'aistudio-build',
-    }
-  }
-});
+const TEMPLATE_LABELS: Record<string, string> = {
+  ariza:        "Ariza (mehnat ta'tili, shaxsiy masala)",
+  tushuntirish: "Tushuntirish xati",
+  tavsifnoma:   "Tavsifnoma (xarakteristika)",
+  shartnoma:    "Ikki tomonlama oldi-sotdi shartnomasi",
+  bildirgi:     "Bildirgi / Dokladnaya xati",
+  malumotnoma:  "Ma'lumotnoma",
+  free:         "Erkin rasmiy murojaat",
+};
 
 export default async function handler(req: any, res: any) {
-  // Support CORS
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
-  );
+  if (handlePreflight(req, res)) return;
 
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Faqat POST so'rovlari qabul qilinadi." });
   }
 
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: "Method not allowed. Use POST." });
+  const keyError = checkApiKey(req);
+  if (keyError) {
+    return res.status(503).json({ error: keyError, code: "NO_API_KEY" });
   }
 
   try {
-    const { templateType, to, from, detail } = req.body || {};
-    
-    let typeLabel = "";
-    switch (templateType) {
-      case "ariza": typeLabel = "Ariza (Zayavlenie)"; break;
-      case "tushuntirish": typeLabel = "Tushuntirish xati (Obyasnitelnaya)"; break;
-      case "tavsifnoma": typeLabel = "Tavsifnoma (Xarakteristika / tavsiyanoma)"; break;
-      case "shartnoma": typeLabel = "Ikki tomonlama shartnoma (Yuridik shartnoma)"; break;
-      case "bildirgi": typeLabel = "Bildirgi (Dokladnaya)"; break;
-      case "malumotnoma": typeLabel = "Ma'lumotnoma berish so'rovi"; break;
-      default: typeLabel = "Rasmiy Hujjat (Erkin shablon)"; break;
-    }
+    const { templateType, to, from, detail } = req.body ?? {};
 
-    const prompt = `Siz professional hujjatchi, yurist va o'zbek tili rasmiy-idoraviy muloqot tizimi mutaxassisiz. Quyidagi parametrlarga asoslanib, rasmiy andozalarga mos keladigan o'zbek tilida (lotin alifbosida) professional hujjat tayyorlab bering.
+    const typeLabel = TEMPLATE_LABELS[templateType] ?? TEMPLATE_LABELS.free;
+
+    const prompt = `Siz professional hujjatchi, yurist va o'zbek tili rasmiy-idoraviy uslub mutaxassisiz.
 
 Hujjat turi: ${typeLabel}
-Kimga: ${to || 'Tegishli mas\'ul shaxs/rahbariyatga'}
-Kimdan: ${from || 'Ariza beruvchi/Xodimgdan'}
-Batafsil sabab/tafsilot (erkin matn): ${detail || 'Shaxsiy masalalar yuzasidan'}
+Kimga: ${to || "Tegishli mas'ul shaxs/rahbariyatga"}
+Kimdan: ${from || "Murojaat etuvchi"}
+Tafsilot/sabab: ${detail || "Shaxsiy masalalar yuzasidan"}
 
-Yo'riqnomalar:
-1. Hujjatning rasmiy andozasini (strukturasini) to'liq saqlang:
-   - Yuqori o'ng burchakda kimga berilganligi va kimdan yozilganligi (shlyapka qismi). Har bir satr boshi o'ng tomonga mos tushadigan qilib chiroyli joylashtirilsin.
-   - O'rtada sarlavha ("ARIZA", "TUSHUNTIRISH XATI", "TAVSIFNOMA", "SHARTNOMA", "BILDIRGI" va hk.) katta harflar bilan sarlavha sifatida yozilsin.
-   - Matn qismida bayon mazmuni oqlangan, tushunarli, aniq, bexato va rasmiy-idoraviy uslub qoidalariga rioya qilgan holda ifodalansin.
-   - Agar shablon shartnoma bo'lsa, ikki tomonning huquq, majburiyatlari va to'lov shartlari aniq bandlarda yozilsin.
-   - Pastki qismida imzo va joriy sana qo'yish uchun aniq joy ajrating (masalan: "Imzo: _____________", "Sana: [Sana]" yoki shunga o'xshash). Special placeholder for signature line like "Imzo: _______________" is required.
-2. Hech qanday markdown belgilari, ya'ni sarlavha uchun hash (#) g'lamlari yoki qalin matn uchun yulduzchalar (**) MUTLAQO ishlatmang. Hujjatni toza, oddiy matn ko'rinishida yozing, bu bizga uni qo'lyozma va chop etishda chiroyli ko'rsatishga va chop etganda buzilmasligiga yordam beradi.
-3. Kirish va xulosa izohlari (masalan "Mana siz so'ragan ariza:") umuman yozmang. Faqat hujjat matnining o'zini qaytaring.
-4. Generatsiya natijasida so'zlar bir-biriga yopishib ketmasin. Bo'shliqlar va tinish belgilari toza bo'lishini ta'minlang.`;
+Qoidalar (MAJBURIY):
+1. Hujjatning to'liq rasmiy andozasini saqlang:
+   - Yuqori o'ng burchak: kimga va kimdan (shlyapka) — har satr o'ngga tekislangan
+   - Markaz: sarlavha KATTA HARFLAR bilan ("ARIZA", "SHARTNOMA", va h.k.)
+   - Asosiy matn: rasmiy-idoraviy uslubda, aniq va bexato
+   - Quyi qism: imzo va sana joylashtirish uchun ("Imzo: ___________", "Sana: ___________")
+2. Markdown belgilari (#, **, *, _) QATIY TAQIQLANADI — faqat toza oddiy matn
+3. Kirish so'zlari ("Mana sizning arizangiz:", "Albatta!" va h.k.) YOZMANG — faqat hujjat matni
+4. Shartnomada: 2 tomonning huquq, majburiyat, to'lov shartlari alohida bandlarda
+5. Imlo va tinish belgilari to'g'ri, so'zlar orasida keraksiz bo'shliq yo'q`;
+
+    const ai = createClient(req);
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
+      model: GEMINI_MODEL,
       contents: prompt,
+      config: {
+        maxOutputTokens: 3000,
+        temperature: 0.4,
+      },
     });
 
-    return res.status(200).json({ output: response.text || "" });
-  } catch (error: any) {
-    console.error("Document Template Vercel Error:", error);
-    return res.status(500).json({ 
-      error: "Hujjat shablonini generatsiya qilish xizmati vaqtincha band, iltimos birozdan keyin qayta urinib ko'ring." 
-    });
+    const output = extractText(response);
+    if (!output) {
+      return res.status(502).json({ error: "AI bo'sh javob qaytardi." });
+    }
+
+    return res.status(200).json({ output });
+  } catch (err: any) {
+    console.error("[document] Gemini error:", err?.message ?? err);
+    const { status, message } = classifyError(err);
+    return res.status(status === 429 || status === 403 ? status : 500).json({ error: message });
   }
 }

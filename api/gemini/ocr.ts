@@ -1,72 +1,79 @@
-import { GoogleGenAI } from "@google/genai";
+import { handlePreflight, checkApiKey, createClient, extractText, classifyError, GEMINI_MODEL } from "./_lib";
 
-const apiKey = process.env.GEMINI_API_KEY || "";
-const ai = new GoogleGenAI({
-  apiKey: apiKey,
-  httpOptions: {
-    headers: {
-      'User-Agent': 'aistudio-build',
-    }
-  }
-});
+const SUPPORTED_MIME = new Set([
+  "image/jpeg", "image/jpg", "image/png", "image/webp",
+  "image/gif", "image/bmp", "image/tiff",
+]);
 
 export default async function handler(req: any, res: any) {
-  // Support CORS
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
-  );
+  if (handlePreflight(req, res)) return;
 
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Faqat POST so'rovlari qabul qilinadi." });
   }
 
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: "Method not allowed. Use POST." });
+  const keyError = checkApiKey(req);
+  if (keyError) {
+    return res.status(503).json({ error: keyError, code: "NO_API_KEY" });
   }
 
   try {
-    const { image } = req.body || {};
+    const { image } = req.body ?? {};
+
     if (!image) {
-      return res.status(400).json({ error: "Rasm ma'lumotlari yuborilmadi" });
+      return res.status(400).json({ error: "Rasm ma'lumotlari yuborilmadi." });
     }
 
-    // Extract mimeType and base64 string
-    const match = image.match(/^data:(image\/\w+);base64,(.+)$/);
+    // Parse data-URL: "data:<mimeType>;base64,<data>"
+    const match = (image as string).match(/^data:([\w/+]+);base64,(.+)$/);
     if (!match) {
-      return res.status(400).json({ error: "Rasm formati mos kelmadi" });
+      return res.status(400).json({ error: "Rasm formati noto'g'ri (base64 data-URL kutiladi)." });
     }
 
-    const mimeType = match[1];
-    const base64Data = match[2];
+    const [, mimeType, base64Data] = match;
 
-    const prompt = `Quyidagi rasm (tasvir) ichidagi barcha matnlarni juda yuqori aniqlikda va to'liq o'qib bering (OCR).
-Matn o'zbek (lotin yoki kirill), rus, yoki ingliz tillarida bo'lishi mumkin. Kirill tilidagi 'ў', 'қ', 'ғ', 'ҳ' kabi harflarni to'g'ri o'qing.
-Matndagi qatorma-qator tuzilmani saqlab qolishga harakat qiling. Doimiy ma'lumotlarni tushirib qoldirmang.
-Hech qanday qo'shimcha tsentzura, sarlavha, kirish gaplari yoki tushuntirishlar qo'shmang. Faqatgina rasmdan o'qilgan matnning o'zini qaytaring.`;
+    if (!SUPPORTED_MIME.has(mimeType.toLowerCase())) {
+      return res.status(400).json({ error: `Qo'llab-quvvatlanmaydigan rasm formati: ${mimeType}` });
+    }
+
+    const prompt = `Bu rasmdan barcha matnlarni yuqori aniqlikda o'qib bering (OCR).
+
+Ko'rsatmalar:
+• Matn o'zbek (lotin/kirill), rus yoki ingliz tilida bo'lishi mumkin
+• Kirill harflarni to'g'ri o'qing: ў, қ, ғ, ҳ, ё, ъ kabilar
+• Asl qatorlar va paragraf tuzilmasini saqlang
+• Jadvallar, ro'yxatlar va sarlavhalarni ko'rinishiga mos formatlang
+• Hech qanday kirish gaplari yoki tushuntirish yozmang — faqat o'qilgan matn
+• Matnni o'qib bo'lmasa: "(O'qib bo'lmadi)" deb yozing`;
+
+    const ai = createClient(req);
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
+      model: GEMINI_MODEL,
       contents: [
         {
           inlineData: {
-            mimeType: mimeType,
+            mimeType,
             data: base64Data,
           },
-        },
+        } as any,
         prompt,
       ],
+      config: {
+        maxOutputTokens: 4096,
+        temperature: 0.1,
+      },
     });
 
-    return res.status(200).json({ output: response.text });
-  } catch (error: any) {
-    console.error("OCR Vercel Error:", error);
-    return res.status(500).json({ 
-      error: "Skanerdan matn o'qish (OCR) xizmati vaqtincha band, iltimos birozdan keyin qayta urinib ko'ring." 
-    });
+    const output = extractText(response);
+    if (!output) {
+      return res.status(502).json({ error: "Rasmdan matn o'qib bo'lmadi." });
+    }
+
+    return res.status(200).json({ output });
+  } catch (err: any) {
+    console.error("[ocr] Gemini error:", err?.message ?? err);
+    const { status, message } = classifyError(err);
+    return res.status(status === 429 || status === 403 ? status : 500).json({ error: message });
   }
 }
